@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+
+  carrier-service:
+    image: openjdk:21
+    container_name: carrierserviceimage
+    ports:
+      - 8081:8080   # HTTP
+      - 8000:8000   # JDWP
+    depends_on:
+      - carrier-service-db
+    networks:
+      - shared-net
+    volumes:
+      - ./build/libs/carrier_management_service-0.0.1-SNAPSHOT.jar:/app/app.jar
+    working_dir: /app
+    entrypoint: java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -jar /app/app.jar
+  carrier-service-db:
+    image: mongo:5.0
+    container_name: carrierservicemongodbimage
+    ports:
+      - 27018:27017
+    networks:
+      - shared-net
+networks:
+  shared-net:
+    external: true
+

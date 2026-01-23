@@ -1,7 +1,9 @@
 package bello.antonio.carrier_management_service.configuration;
 
-import bello.antonio.admin_service.security.JwtAuthenticationFilter;
-import bello.antonio.admin_service.service.CustomUserDetailsService;
+import bello.antonio.carrier_management_service.dto.ApiResponseDTO;
+import bello.antonio.carrier_management_service.security.JwtAuthenticationFilter;
+import bello.antonio.carrier_management_service.service.CustomUserDetailsService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,7 +50,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/admin/authenticate", "/api/admin/add", "/api/admin/get-admin").permitAll()
+                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addCarrierManager", "/deleteCarrierManager").permitAll()
+                        .requestMatchers( "/api/carrier/addVehicle").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -56,15 +59,18 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(HttpStatus.FORBIDDEN.value());
-                            response.setContentType("text/plain");
-                            response.getWriter().write("Accesso negato: token JWT non valido, scaduto o mancante");
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType("application/json");
+                            ApiResponseDTO error = new ApiResponseDTO("Access denied: JWT token missing, invalid, or expired", 401);
+                            response.getWriter().write(new ObjectMapper().writeValueAsString(error));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpStatus.FORBIDDEN.value());
-                            response.setContentType("text/plain");
-                            response.getWriter().write("Credenziali non valide!");
+                            response.setContentType("application/json");
+                            ApiResponseDTO error = new ApiResponseDTO("You do not have permission to access this resource", 403);
+                            response.getWriter().write(new ObjectMapper().writeValueAsString(error));
                         })
+
                 )
 
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -79,7 +85,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://51.21.23.52:80")); // Frontend IP:PORT
+        //configuration.setAllowedOrigins(List.of("http://51.21.23.52:80"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Frontend IP:PORT
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Aggiungi OPTIONS!
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true); // Importante se usi cookie/token
