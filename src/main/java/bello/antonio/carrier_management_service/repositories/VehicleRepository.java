@@ -13,6 +13,7 @@ public interface VehicleRepository extends MongoRepository<Vehicle, String> {
     List<Vehicle> findByMaxWeightGreaterThanAndWidthGreaterThanAndHeightGreaterThanAndLengthGreaterThanAndRefrigerated(
             float maxWeight, int width, int height, int length, boolean refrigerated
     );
+    void deleteAllByVehicleName(String vehicleName);
 
 
 

@@ -50,8 +50,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addCarrierManager", "/api/carrier/deleteCarrierManager", "/api/carrier/retrieveTrips").permitAll()
-                        .requestMatchers( "/api/carrier/addVehicle").hasRole("ADMIN")
+                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addCarrierManager", "/api/carrier/deleteCarrierManager", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip").permitAll()
+                        .requestMatchers( "/api/carrier/addVehicle", "/api/carrier/vehicles", "/api/carrier/deleteVehicle", "/api/carrier/trips", "/api/carrier/deleteTrip", "/api/carrier/shipmentsByTrip", "/api/carrier/deleteShipment").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -61,20 +61,17 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType("application/json");
-                            ApiResponseDTO error = new ApiResponseDTO("Access denied: JWT token missing, invalid, or expired", 401);
+                            ApiResponseDTO<Object> error = new ApiResponseDTO<>("Access denied: JWT token missing, invalid, or expired", 401, null);
                             response.getWriter().write(new ObjectMapper().writeValueAsString(error));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpStatus.FORBIDDEN.value());
                             response.setContentType("application/json");
-                            ApiResponseDTO error = new ApiResponseDTO("You do not have permission to access this resource", 403);
+                            ApiResponseDTO<Object> error = new ApiResponseDTO<>("You do not have permission to access this resource", 403, null);
                             response.getWriter().write(new ObjectMapper().writeValueAsString(error));
                         })
-
                 )
-
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 

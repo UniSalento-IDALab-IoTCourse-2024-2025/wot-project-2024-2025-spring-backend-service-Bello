@@ -7,6 +7,7 @@ public class TripDTO {
     private String id;
     private String vehicleName;
     private String pathPolyline;
+    private double distanceKm;
     private boolean started;
     private Date arrivalDate;
     private float price;
@@ -34,6 +35,14 @@ public class TripDTO {
 
     public void setPathPolyline(String pathPolyline) {
         this.pathPolyline = pathPolyline;
+    }
+
+    public double getDistanceKm() {
+        return distanceKm;
+    }
+
+    public void setDistanceKm(double distanceKm) {
+        this.distanceKm = distanceKm;
     }
 
     public boolean isStarted() {

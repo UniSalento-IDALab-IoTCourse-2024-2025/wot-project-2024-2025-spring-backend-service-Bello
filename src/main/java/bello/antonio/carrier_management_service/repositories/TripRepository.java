@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface TripRepository extends MongoRepository<Trip, String> {
     Optional<Trip> findByVehicleName(String vehicleName);
+    void deleteAllByVehicleName(String vehicleName);
 }
 
