@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addCarrierManager", "/deleteCarrierManager").permitAll()
+                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addCarrierManager", "/api/carrier/deleteCarrierManager", "/api/carrier/retrieveTrips").permitAll()
                         .requestMatchers( "/api/carrier/addVehicle").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
