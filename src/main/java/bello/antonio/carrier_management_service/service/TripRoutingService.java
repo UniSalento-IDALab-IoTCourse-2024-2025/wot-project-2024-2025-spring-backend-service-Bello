@@ -41,11 +41,21 @@ public class TripRoutingService {
                 throw new RuntimeException("Address not found: " + address);
             }
 
-            Map location = (Map)((Map) results.get(0)).get("geometry");
-            Map latLng = (Map) location.get("location");
+            Map firstResult = (Map) results.get(0);
+            Map geometry = (Map) firstResult.get("geometry");
+            Map latLng = (Map) geometry.get("location");
+
+            // 👇 Aggiungi questo per vedere la precisione
+            String locationType = (String) geometry.get("location_type");
+            String formattedAddress = (String) firstResult.get("formatted_address");
+            System.out.println("Address: " + address);
+            System.out.println("Formatted: " + formattedAddress);
+            System.out.println("Location type: " + locationType);
 
             double lat = ((Number) latLng.get("lat")).doubleValue();
             double lng = ((Number) latLng.get("lng")).doubleValue();
+
+            System.out.println("Coordinates: " + lat + ", " + lng);
 
             return new LatLng(lat, lng);
 
@@ -82,7 +92,7 @@ public class TripRoutingService {
                         )
                 ),
                 "travelMode", "DRIVE",
-                "routingPreference", "TRAFFIC_AWARE",
+                "routingPreference", "TRAFFIC_UNAWARE",
                 "computeAlternativeRoutes", false,
                 "routeModifiers", Map.of(
                         "avoidTolls", false,
@@ -108,8 +118,10 @@ public class TripRoutingService {
 
             double distanceKm = ((Number) route.get("distanceMeters")).doubleValue() / 1000.0;
             String polyline = (String) ((Map<String, Object>) route.get("polyline")).get("encodedPolyline");
-
-            return new RouteInfoDTO(polyline, distanceKm);
+            double durationSec = ((Number) route.get("duration")) != null
+                    ? ((Number) route.get("duration")).doubleValue()
+                    : 0;
+            return new RouteInfoDTO(polyline, distanceKm, durationSec);
 
         } catch (HttpStatusCodeException ex) {
             String errorbody = ex.getResponseBodyAsString();

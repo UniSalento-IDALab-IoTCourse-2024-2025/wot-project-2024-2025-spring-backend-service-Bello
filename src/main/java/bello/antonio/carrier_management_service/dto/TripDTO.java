@@ -1,17 +1,25 @@
 package bello.antonio.carrier_management_service.dto;
 
+import com.google.maps.model.LatLng;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
+
 import java.util.Date;
 
 public class TripDTO {
 
     private String id;
     private String vehicleName;
+    @GeoSpatialIndexed
+    private LatLng departureLatLng;
+    @GeoSpatialIndexed
+    private LatLng arrivalLatLng;
     private String pathPolyline;
     private double distanceKm;
     private boolean started;
     private Date arrivalDate;
     private float price;
     private boolean scheduled;
+    private double duration;
 
     public String getId() {
         return id;
@@ -27,6 +35,22 @@ public class TripDTO {
 
     public void setVehicleName(String vehicleName) {
         this.vehicleName = vehicleName;
+    }
+
+    public LatLng getDepartureLatLng() {
+        return departureLatLng;
+    }
+
+    public void setDepartureLatLng(LatLng departureLatLng) {
+        this.departureLatLng = departureLatLng;
+    }
+
+    public LatLng getArrivalLatLng() {
+        return arrivalLatLng;
+    }
+
+    public void setArrivalLatLng(LatLng arrivalLatLng) {
+        this.arrivalLatLng = arrivalLatLng;
     }
 
     public String getPathPolyline() {
@@ -75,5 +99,13 @@ public class TripDTO {
 
     public void setPrice(float price) {
         this.price = price;
+    }
+
+    public double getDuration() {
+        return duration;
+    }
+
+    public void setDuration(double duration) {
+        this.duration = duration;
     }
 }

@@ -1,6 +1,8 @@
 package bello.antonio.carrier_management_service.domain;
 
+import com.google.maps.model.LatLng;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -12,6 +14,12 @@ public class Shipment {
     private String vehicleName;
     private String departureAddress;
     private String arrivalAddress;
+    private double distanceKm;
+    private double duration;
+    @GeoSpatialIndexed
+    private LatLng departureLatLng;
+    @GeoSpatialIndexed
+    private LatLng arrivalLatLng;
     private Date arrivalDate;
     private int width;
     private int height;
@@ -52,12 +60,36 @@ public class Shipment {
         this.arrivalAddress = arrivalAddress;
     }
 
+    public double getDistanceKm() {
+        return distanceKm;
+    }
+
+    public void setDistanceKm(double distanceKm) {
+        this.distanceKm = distanceKm;
+    }
+
     public Date getArrivalDate() {
         return arrivalDate;
     }
 
     public void setArrivalDate(Date arrivalDate) {
         this.arrivalDate = arrivalDate;
+    }
+
+    public LatLng getDepartureLatLng() {
+        return departureLatLng;
+    }
+
+    public void setDepartureLatLng(LatLng departureLatLng) {
+        this.departureLatLng = departureLatLng;
+    }
+
+    public LatLng getArrivalLatLng() {
+        return arrivalLatLng;
+    }
+
+    public void setArrivalLatLng(LatLng arrivalLatLng) {
+        this.arrivalLatLng = arrivalLatLng;
     }
 
     public int getWidth() {
@@ -106,5 +138,13 @@ public class Shipment {
 
     public void setPrice(float price) {
         this.price = price;
+    }
+
+    public double getDuration() {
+        return duration;
+    }
+
+    public void setDuration(double duration) {
+        this.duration = duration;
     }
 }

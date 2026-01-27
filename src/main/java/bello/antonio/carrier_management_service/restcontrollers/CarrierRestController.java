@@ -23,10 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static bello.antonio.carrier_management_service.configuration.SecurityConfig.passwordEncoder;
 
@@ -134,35 +131,42 @@ public class CarrierRestController {
 
 
     @PostMapping("/retrieveTrips")
-    public ResponseEntity<ApiResponseDTO<List<TripDTO>>> retrieveTrips(@RequestBody ShipmentDTO shipmentDTO) {
+    public ResponseEntity<ApiResponseDTO<RetrievedTripsDTO>> retrieveTrips(@RequestBody ShipmentDTO shipmentDTO) {
 
-        // 1️⃣ Filtra i veicoli disponibili
-        List<Vehicle> vehicles =
-                vehicleRepository.findByMaxWeightGreaterThanAndWidthGreaterThanAndHeightGreaterThanAndLengthGreaterThanAndRefrigerated(
-                        shipmentDTO.getWeight(),
-                        shipmentDTO.getWidth(),
-                        shipmentDTO.getHeight(),
-                        shipmentDTO.getLength(),
-                        shipmentDTO.isRefrigerated()
-                );
+        List<Vehicle> availableVehicles = vehicleRepository.findAvailableVehicles(
+                shipmentDTO.getWeight(),
+                shipmentDTO.getWidth(),
+                shipmentDTO.getHeight(),
+                shipmentDTO.getLength(),
+                shipmentDTO.isRefrigerated()
+        );
 
-        List<Vehicle> availableVehicles = vehicles.stream()
-                .filter(v -> tripRepository.findByVehicleName(v.getVehicleName()).isEmpty())
-                .toList();
+        // 2️⃣ Usa le coordinate già fornite dal frontend (da Google Places Autocomplete)
+        // invece di fare geocoding (che spreca una chiamata API)
+        LatLng departure;
+        LatLng arrival;
 
-        // 2️⃣ Coordinate e rotta
-        LatLng departure = tripRoutingService.geocode(shipmentDTO.getDepartureAddress());
-        LatLng arrival   = tripRoutingService.geocode(shipmentDTO.getArrivalAddress());
+        if (shipmentDTO.getDepartureLatLng() != null && shipmentDTO.getArrivalLatLng() != null) {
+            // Usa le coordinate dal frontend
+            departure = shipmentDTO.getDepartureLatLng();
+            arrival = shipmentDTO.getArrivalLatLng();
+        } else {
+            // Fallback: geocoding solo se le coordinate non sono fornite
+            departure = tripRoutingService.geocode(shipmentDTO.getDepartureAddress());
+            arrival = tripRoutingService.geocode(shipmentDTO.getArrivalAddress());
+        }
 
         RouteInfoDTO routeInfo = tripRoutingService.computeRoute(departure, arrival);
         String polyline = routeInfo.getPolyline();
         double distanceKm = routeInfo.getDistanceKm();
-
+        shipmentDTO.setDistanceKm(distanceKm);
         // 3️⃣ Costruisci la lista di TripDTO
-        List<TripDTO> trips = availableVehicles.stream().map(vehicle -> {
+        List<TripDTO> availableTripsDTO = availableVehicles.stream().map(vehicle -> {
             TripDTO trip = new TripDTO();
             trip.setVehicleName(vehicle.getVehicleName());
             trip.setArrivalDate(shipmentDTO.getArrivalDate());
+            trip.setDepartureLatLng(departure);
+            trip.setArrivalLatLng(arrival);
             trip.setPathPolyline(polyline);
             trip.setDistanceKm(distanceKm);
             trip.setPrice((float)(vehicle.getPricePerKm() * distanceKm));
@@ -171,10 +175,36 @@ public class CarrierRestController {
             return trip;
         }).toList();
 
-        ApiResponseDTO<List<TripDTO>> response = new ApiResponseDTO<>(
+        List<Trip> busyTrips = tripRepository.findBusyTrips(
+                shipmentDTO.getArrivalDate()
+        );
+
+        List<TripDTO> busyTripsDTO = busyTrips.stream().map(trip -> {
+            TripDTO dto = new TripDTO();
+            dto.setId(trip.getId());
+            dto.setVehicleName(trip.getVehicleName());
+            dto.setDepartureLatLng(trip.getDepartureLatLng());
+            dto.setArrivalLatLng(trip.getArrivalLatLng());
+            dto.setArrivalDate(trip.getArrivalDate());
+            dto.setPathPolyline(trip.getPathPolyline());
+            dto.setDistanceKm(trip.getDistanceKm());
+            dto.setPrice(trip.getPrice());
+            dto.setScheduled(true);
+            dto.setStarted(false);
+            return dto;
+        }).toList();
+
+        List<TripDTO> allTrips = new ArrayList<>();
+        allTrips.addAll(availableTripsDTO);  // quelli calcolati da availableVehicles
+        allTrips.addAll(busyTripsDTO);      // quelli calcolati da busyVehicles / aggregation
+
+        RetrievedTripsDTO retrievedTripsDTO = new RetrievedTripsDTO();
+        retrievedTripsDTO.setShipmentDTO(shipmentDTO);
+        retrievedTripsDTO.setTripsDTO(allTrips);
+        ApiResponseDTO<RetrievedTripsDTO> response = new ApiResponseDTO<>(
                 "Available trips retrieved successfully",
                 200,
-                trips
+                retrievedTripsDTO
         );
 
         return ResponseEntity.ok(response);
@@ -191,8 +221,9 @@ public class CarrierRestController {
         trip.setVehicleName(t.getVehicleName());
         trip.setArrivalDate(t.getArrivalDate());
         trip.setPathPolyline(t.getPathPolyline());
+        trip.setDepartureLatLng(t.getDepartureLatLng());
+        trip.setArrivalLatLng(t.getArrivalLatLng());
         trip.setDistanceKm(t.getDistanceKm());
-        trip.setPrice(t.getPrice());
         trip.setScheduled(t.isScheduled());
         trip.setStarted(t.isStarted());
 
@@ -202,6 +233,8 @@ public class CarrierRestController {
         shipment.setVehicleName(s.getVehicleName());
         shipment.setDepartureAddress(s.getDepartureAddress());
         shipment.setArrivalAddress(s.getArrivalAddress());
+        shipment.setDepartureLatLng(s.getDepartureLatLng());
+        shipment.setArrivalLatLng(s.getArrivalLatLng());
         shipment.setArrivalDate(s.getArrivalDate());
         shipment.setWeight(s.getWeight());
         shipment.setWidth(s.getWidth());
@@ -216,13 +249,5 @@ public class CarrierRestController {
                 new ApiResponseDTO<>("Trip selected and shipment created", 200, null)
         );
     }
-
-
-
-
-
-
-
-
 
 }

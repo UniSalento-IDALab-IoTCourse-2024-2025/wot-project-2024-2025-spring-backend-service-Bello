@@ -112,6 +112,8 @@ public class CarrierProtectedRestController {
             TripDTO dto = new TripDTO();
             dto.setId(trip.getId());
             dto.setVehicleName(trip.getVehicleName());
+            dto.setDepartureLatLng(trip.getDepartureLatLng());
+            dto.setArrivalLatLng(trip.getArrivalLatLng());
             dto.setPathPolyline(trip.getPathPolyline());
             dto.setStarted(trip.isStarted());
             dto.setScheduled(trip.isScheduled());
@@ -165,6 +167,8 @@ public class CarrierProtectedRestController {
                     dto.setId(s.getId());
                     dto.setDepartureAddress(s.getDepartureAddress());
                     dto.setArrivalAddress(s.getArrivalAddress());
+                    dto.setDepartureLatLng(s.getDepartureLatLng());
+                    dto.setArrivalLatLng(s.getArrivalLatLng());
                     dto.setWeight(s.getWeight());
                     dto.setWidth(s.getWidth());
                     dto.setHeight(s.getHeight());
