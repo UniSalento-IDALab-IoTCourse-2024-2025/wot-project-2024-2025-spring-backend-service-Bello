@@ -34,7 +34,7 @@ public interface VehicleRepository extends MongoRepository<Vehicle, String> {
 
             // 2️⃣ Join con trips
             "{ $lookup: { " +
-                    "from: 'trips', " +
+                    "from: 'trip', " +
                     "localField: 'vehicleName', " +
                     "foreignField: 'vehicleName', " +
                     "as: 'trips' " +

@@ -20,6 +20,10 @@ public class TripDTO {
     private float price;
     private boolean scheduled;
     private double duration;
+    private int remainingWidth;
+    private int remainingHeight;
+    private int remainingLength;
+    private int remainingWeight;
 
     public String getId() {
         return id;
@@ -107,5 +111,37 @@ public class TripDTO {
 
     public void setDuration(double duration) {
         this.duration = duration;
+    }
+
+    public int getRemainingWeight() {
+        return remainingWeight;
+    }
+
+    public void setRemainingWeight(int remainingWeight) {
+        this.remainingWeight = remainingWeight;
+    }
+
+    public int getRemainingLength() {
+        return remainingLength;
+    }
+
+    public void setRemainingLength(int remainingLength) {
+        this.remainingLength = remainingLength;
+    }
+
+    public int getRemainingHeight() {
+        return remainingHeight;
+    }
+
+    public void setRemainingHeight(int remainingHeight) {
+        this.remainingHeight = remainingHeight;
+    }
+
+    public int getRemainingWidth() {
+        return remainingWidth;
+    }
+
+    public void setRemainingWidth(int remainingWidth) {
+        this.remainingWidth = remainingWidth;
     }
 }

@@ -115,10 +115,16 @@ public class CarrierProtectedRestController {
             dto.setDepartureLatLng(trip.getDepartureLatLng());
             dto.setArrivalLatLng(trip.getArrivalLatLng());
             dto.setPathPolyline(trip.getPathPolyline());
+            dto.setDuration(trip.getDuration());
+            dto.setDistanceKm(trip.getDistanceKm());
             dto.setStarted(trip.isStarted());
             dto.setScheduled(trip.isScheduled());
             dto.setArrivalDate(trip.getArrivalDate());
             dto.setPrice(trip.getPrice());
+            dto.setRemainingWeight(trip.getRemainingWeight());
+            dto.setRemainingWidth(trip.getRemainingWidth());
+            dto.setRemainingHeight(trip.getRemainingHeight());
+            dto.setRemainingLength(trip.getRemainingLength());
             return dto;
         }).toList();
 
@@ -169,6 +175,8 @@ public class CarrierProtectedRestController {
                     dto.setArrivalAddress(s.getArrivalAddress());
                     dto.setDepartureLatLng(s.getDepartureLatLng());
                     dto.setArrivalLatLng(s.getArrivalLatLng());
+                    dto.setDuration(s.getDuration());
+                    dto.setDistanceKm(s.getDistanceKm());
                     dto.setWeight(s.getWeight());
                     dto.setWidth(s.getWidth());
                     dto.setHeight(s.getHeight());

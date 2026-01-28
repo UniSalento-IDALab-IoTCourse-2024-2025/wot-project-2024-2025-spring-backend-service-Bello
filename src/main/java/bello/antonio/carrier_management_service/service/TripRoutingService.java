@@ -72,7 +72,7 @@ public class TripRoutingService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-Goog-Api-Key", apiKey);
-        headers.set("X-Goog-FieldMask", "routes.distanceMeters,routes.polyline.encodedPolyline");
+        headers.set("X-Goog-FieldMask", "routes.distanceMeters,routes.polyline.encodedPolyline,routes.duration");
 
         Map<String, Object> body = Map.of(
                 "origin", Map.of(
@@ -118,9 +118,13 @@ public class TripRoutingService {
 
             double distanceKm = ((Number) route.get("distanceMeters")).doubleValue() / 1000.0;
             String polyline = (String) ((Map<String, Object>) route.get("polyline")).get("encodedPolyline");
-            double durationSec = ((Number) route.get("duration")) != null
-                    ? ((Number) route.get("duration")).doubleValue()
-                    : 0;
+            double durationSec = 0;
+            Object durationObj = route.get("duration");
+            if (durationObj != null) {
+                String durationStr = durationObj.toString(); // es. "3600s"
+                durationStr = durationStr.replace("s", "");  // rimuove la 's'
+                durationSec = Double.parseDouble(durationStr);
+            }
             return new RouteInfoDTO(polyline, distanceKm, durationSec);
 
         } catch (HttpStatusCodeException ex) {
@@ -132,7 +136,63 @@ public class TripRoutingService {
         }
     }
 
+    public RouteInfoDTO computeRouteWithWaypoints(LatLng departure, LatLng arrival, List<LatLng> waypoints) {
+        String url = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Goog-Api-Key", apiKey);
+        headers.set("X-Goog-FieldMask", "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline");
+
+        // Costruisci la lista di waypoints
+        List<Map<String, Object>> intermediates = waypoints.stream()
+                .map(wp -> Map.<String, Object>of(
+                        "location", Map.of(
+                                "latLng", Map.of(
+                                        "latitude", wp.lat,
+                                        "longitude", wp.lng
+                                )
+                        )
+                ))
+                .toList();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("origin", Map.of(
+                "location", Map.of(
+                        "latLng", Map.of("latitude", departure.lat, "longitude", departure.lng)
+                )
+        ));
+        body.put("destination", Map.of(
+                "location", Map.of(
+                        "latLng", Map.of("latitude", arrival.lat, "longitude", arrival.lng)
+                )
+        ));
+        body.put("intermediates", intermediates);  // <-- waypoints qui
+        body.put("travelMode", "DRIVE");
+        body.put("routingPreference", "TRAFFIC_UNAWARE");
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+            Map<String, Object> responseBody = response.getBody();
+
+            List<Map<String, Object>> routes = (List<Map<String, Object>>) responseBody.get("routes");
+            Map<String, Object> route = routes.get(0);
+
+            double distanceKm = ((Number) route.get("distanceMeters")).doubleValue() / 1000.0;
+            String polyline = (String) ((Map<String, Object>) route.get("polyline")).get("encodedPolyline");
+
+            // Duration viene restituita come stringa "123s"
+            String durationStr = (String) route.get("duration");
+            double durationSec = Double.parseDouble(durationStr.replace("s", ""));
+
+            return new RouteInfoDTO(polyline, distanceKm, durationSec);
+
+        } catch (HttpStatusCodeException ex) {
+            throw new RuntimeException("Google Routes API error: " + ex.getResponseBodyAsString(), ex);
+        }
+    }
 
 }
 
