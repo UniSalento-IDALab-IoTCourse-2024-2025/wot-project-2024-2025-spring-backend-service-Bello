@@ -24,6 +24,7 @@ public class TripDTO {
     private int remainingHeight;
     private int remainingLength;
     private int remainingWeight;
+    private boolean refrigerated;
 
     public String getId() {
         return id;
@@ -143,5 +144,13 @@ public class TripDTO {
 
     public void setRemainingWidth(int remainingWidth) {
         this.remainingWidth = remainingWidth;
+    }
+
+    public boolean isRefrigerated() {
+        return refrigerated;
+    }
+
+    public void setRefrigerated(boolean refrigerated) {
+        this.refrigerated = refrigerated;
     }
 }
