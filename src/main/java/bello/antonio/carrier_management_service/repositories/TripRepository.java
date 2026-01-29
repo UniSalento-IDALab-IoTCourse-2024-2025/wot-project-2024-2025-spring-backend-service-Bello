@@ -31,7 +31,7 @@ public interface TripRepository extends MongoRepository<Trip, String> {
                     "'remainingHeight': { $gte: ?2 }, " +
                     "'remainingLength': { $gte: ?3 }, " +
                     "'vehicle.refrigerated': { $eq: ?4 }, " +
-                    "'arrivalDate': { $gte: ?5 } " +
+                    "'arrivalDate': { $lte: ?5 } " +
                     "} }",
 
             // 4️⃣ Join con shipment per calcolare il prezzo

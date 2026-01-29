@@ -177,6 +177,7 @@ public class CarrierProtectedRestController {
                     dto.setArrivalLatLng(s.getArrivalLatLng());
                     dto.setDuration(s.getDuration());
                     dto.setDistanceKm(s.getDistanceKm());
+                    dto.setPrice(s.getPrice());
                     dto.setWeight(s.getWeight());
                     dto.setWidth(s.getWidth());
                     dto.setHeight(s.getHeight());

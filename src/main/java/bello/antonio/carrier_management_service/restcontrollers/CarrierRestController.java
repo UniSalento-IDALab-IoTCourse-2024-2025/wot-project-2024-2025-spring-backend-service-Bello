@@ -248,8 +248,8 @@ public class CarrierRestController {
         LatLng shipmentDeparture = departure;
         LatLng shipmentArrival = arrival;
 
-        double maxDistanceKm = 0.7;
-        double toleranceSec = 300;
+        double maxDistanceKm = 1.5;
+        double toleranceSec = 1800;
 
         System.out.println("\n🔍 FASE 4 - Filtraggio busy trips (soglia: " + maxDistanceKm + " km, tolleranza: " + toleranceSec + " sec)");
 
@@ -285,11 +285,43 @@ public class CarrierRestController {
             }
 
             try {
-                System.out.println("      📐 Calcolo nuova route con waypoints...");
+                System.out.println("      🔄 Calcolo nuova route con waypoints...");
+
+                // ✅ NUOVO: Recupera tutti gli shipment esistenti per questo trip/vehicle
+                List<Shipment> existingShipments = shipmentRepository.findByVehicleName(trip.getVehicleName());
+                System.out.println("      📦 Shipment esistenti per " + trip.getVehicleName() + ": " + existingShipments.size());
+
+                // ✅ NUOVO: Costruisci lista di tutti i waypoints (esistenti + nuovo)
+                List<LatLng> allWaypoints = new ArrayList<>();
+
+                // Aggiungi i waypoints degli shipment esistenti
+                for (Shipment existingShipment : existingShipments) {
+                    allWaypoints.add(existingShipment.getDepartureLatLng());
+                    allWaypoints.add(existingShipment.getArrivalLatLng());
+                    System.out.println("         - Esistente: " + existingShipment.getDepartureAddress() +
+                            " → " + existingShipment.getArrivalAddress());
+                }
+
+                // Aggiungi i waypoints del nuovo shipment
+                allWaypoints.add(shipmentDeparture);
+                allWaypoints.add(shipmentArrival);
+                System.out.println("         - Nuovo: " + shipmentDTO.getDepartureAddress() +
+                        " → " + shipmentDTO.getArrivalAddress());
+
+                // ✅ NUOVO: Ordina i waypoints per distanza dal punto di partenza del trip
+                LatLng tripStart = trip.getDepartureLatLng();
+                allWaypoints.sort((a, b) -> {
+                    double distA = GeoUtils.haversineKm(tripStart, a);
+                    double distB = GeoUtils.haversineKm(tripStart, b);
+                    return Double.compare(distA, distB);
+                });
+
+                System.out.println("      📍 Totale waypoints ordinati: " + allWaypoints.size());
+
                 RouteInfoDTO newRoute = tripRoutingService.computeRouteWithWaypoints(
                         trip.getDepartureLatLng(),
                         trip.getArrivalLatLng(),
-                        List.of(shipmentDeparture, shipmentArrival)
+                        allWaypoints  // ✅ Ora include TUTTI i waypoints
                 );
 
                 double durationDiff = Math.abs(newRoute.getDuration() - trip.getDuration());
@@ -392,10 +424,10 @@ public class CarrierRestController {
             trip.setDuration(t.getDuration());
             trip.setScheduled(true); // ora diventa scheduled
             trip.setStarted(false);
-            trip.setRemainingWidth(t.getRemainingWidth());
-            trip.setRemainingHeight(t.getRemainingHeight());
-            trip.setRemainingLength(t.getRemainingLength());
-            trip.setRemainingWeight(t.getRemainingWeight());
+            trip.setRemainingWidth(t.getRemainingWidth()-s.getWidth());
+            trip.setRemainingHeight(t.getRemainingHeight()-s.getHeight());
+            trip.setRemainingLength(t.getRemainingLength()-s.getLength());
+            trip.setRemainingWeight(t.getRemainingWeight()-s.getWeight());
             Trip savedTrip = tripRepository.save(trip);
             System.out.println(">>> Trip saved with ID: " + savedTrip.getId());
         } else {
