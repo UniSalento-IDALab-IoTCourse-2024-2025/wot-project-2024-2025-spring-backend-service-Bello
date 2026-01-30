@@ -398,6 +398,7 @@ public class CarrierRestController {
         System.out.println("Trip distanceKm: " + t.getDistanceKm());
         System.out.println("Trip duration: " + t.getDuration());
         System.out.println("Trip price: " + t.getPrice());
+        System.out.println("Trip refrigerated: " + t.isRefrigerated());
         System.out.println("Trip scheduled: " + t.isScheduled());
         System.out.println("Trip started: " + t.isStarted());
 

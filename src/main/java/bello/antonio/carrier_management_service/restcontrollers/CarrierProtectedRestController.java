@@ -121,6 +121,7 @@ public class CarrierProtectedRestController {
             dto.setScheduled(trip.isScheduled());
             dto.setArrivalDate(trip.getArrivalDate());
             dto.setPrice(trip.getPrice());
+            dto.setRefrigerated(trip.isRefrigerated());
             dto.setRemainingWeight(trip.getRemainingWeight());
             dto.setRemainingWidth(trip.getRemainingWidth());
             dto.setRemainingHeight(trip.getRemainingHeight());
