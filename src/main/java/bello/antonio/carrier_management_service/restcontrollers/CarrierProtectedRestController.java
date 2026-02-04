@@ -10,17 +10,28 @@ import bello.antonio.carrier_management_service.dto.VehicleDTO;
 import bello.antonio.carrier_management_service.repositories.ShipmentRepository;
 import bello.antonio.carrier_management_service.repositories.TripRepository;
 import bello.antonio.carrier_management_service.repositories.VehicleRepository;
+import bello.antonio.carrier_management_service.websocket.TelemetryWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.springframework.web.client.RestTemplate;
+
 
 @RestController
 @RequestMapping("/api/carrier")
 public class CarrierProtectedRestController {
+
+
+    @Autowired
+    private TelemetryWebSocketHandler telemetryHandler;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    private final String FRIDGE_API_URL = "http://fridge-api:8002";
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -211,6 +222,81 @@ public class CarrierProtectedRestController {
         return ResponseEntity.ok(
                 new ApiResponseDTO<>("Shipments deleted successfully", 200, null)
         );
+    }
+
+    /**
+     * Avvia la simulazione e prepara il WebSocket per ricevere dati.
+     * Il frontend deve già essere connesso a ws://localhost:8080/ws/telemetry
+     */
+    @PostMapping("/trip/startSimulation")
+    public ResponseEntity<ApiResponseDTO<Void>> startSimulation(@RequestBody TripDTO tripDTO) {
+        String vehicleName = tripDTO.getVehicleName();
+
+        if (vehicleName == null || vehicleName.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponseDTO<>("Missing vehicleName", 400, null));
+        }
+
+        try {
+            // 1. Chiama Fridge API per avviare lo stream
+            String url = FRIDGE_API_URL + "/stream/start/" + vehicleName;
+            restTemplate.postForEntity(url, null, Map.class);
+
+            return ResponseEntity.ok(
+                    new ApiResponseDTO<>("Simulation started for " + vehicleName, 200, null)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponseDTO<>("Error starting simulation: " + e.getMessage(), 500, null));
+        }
+    }
+
+    /**
+     * Ferma la simulazione e chiude il WebSocket.
+     */
+    @PostMapping("/trip/stopSimulation")
+    public ResponseEntity<ApiResponseDTO<Void>> stopSimulation() {
+        try {
+            // 1. Chiama Fridge API per fermare lo stream
+            String url = FRIDGE_API_URL + "/stream/stop";
+            try {
+                restTemplate.postForEntity(url, null, Map.class);
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                // Se ritorna 400, significa che lo stream è già terminato (normale)
+                if (e.getStatusCode() != HttpStatus.BAD_REQUEST) {
+                    throw e;
+                }
+                System.out.println("ℹ️ Stream già terminato (stream ha finito il CSV)");
+            }
+
+            // 2. Chiudi la sessione WebSocket
+            telemetryHandler.stopSession();
+
+            return ResponseEntity.ok(
+                    new ApiResponseDTO<>("Simulation stopped", 200, null)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponseDTO<>("Error stopping simulation: " + e.getMessage(), 500, null));
+        }
+    }
+
+    /**
+     * Verifica lo stato della simulazione.
+     */
+    @GetMapping("/simulation/status")
+    public ResponseEntity<ApiResponseDTO<Map<String, Object>>> getSimulationStatus() {
+        try {
+            String url = FRIDGE_API_URL + "/stream/status";
+            Map response = restTemplate.getForObject(url, Map.class);
+
+            return ResponseEntity.ok(
+                    new ApiResponseDTO<>("Status retrieved", 200, response)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponseDTO<>("Error getting status: " + e.getMessage(), 500, null));
+        }
     }
 
 

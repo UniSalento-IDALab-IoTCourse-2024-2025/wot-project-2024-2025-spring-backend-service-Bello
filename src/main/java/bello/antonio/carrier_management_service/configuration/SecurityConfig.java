@@ -51,7 +51,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addCarrierManager", "/api/carrier/deleteCarrierManager", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip").permitAll()
-                        .requestMatchers( "/api/carrier/addVehicle", "/api/carrier/vehicles", "/api/carrier/deleteVehicle", "/api/carrier/trips", "/api/carrier/deleteTrip", "/api/carrier/shipmentsByTrip", "/api/carrier/deleteShipment").hasRole("ADMIN")
+                        .requestMatchers( "/api/carrier/addVehicle", "/api/carrier/vehicles", "/api/carrier/deleteVehicle", "/api/carrier/trips", "/api/carrier/deleteTrip", "/api/carrier/shipmentsByTrip", "/api/carrier/deleteShipment", "/api/carrier/trip/startSimulation", "/api/carrier/trip/stopSimulation", "/api/carrier/simulation/status").hasRole("ADMIN")
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
