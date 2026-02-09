@@ -3,7 +3,6 @@ package bello.antonio.carrier_management_service.configuration;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
 import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
@@ -28,17 +27,24 @@ public class MqttConfig {
         return factory;
     }
 
+    // ✅ Channel per messaggi di telemetria
     @Bean
     public MessageChannel mqttInputChannel() {
         return new DirectChannel();
     }
 
+    // ✅ NUOVO: Channel per messaggi di anomalie
+    @Bean
+    public MessageChannel mqttAnomalyChannel() {
+        return new DirectChannel();
+    }
+
+    // ✅ Adapter per telemetria (topic: fridge/+/telemetry)
     @Bean
     public MqttPahoMessageDrivenChannelAdapter mqttInbound() {
-        // Sottoscrivi a tutti i topic telemetry
         MqttPahoMessageDrivenChannelAdapter adapter =
                 new MqttPahoMessageDrivenChannelAdapter(
-                        CLIENT_ID + "-inbound",
+                        CLIENT_ID + "-inbound-telemetry",
                         mqttClientFactory(),
                         "fridge/+/telemetry"  // + = qualsiasi vehicleName
                 );
@@ -46,6 +52,22 @@ public class MqttConfig {
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);
         adapter.setOutputChannel(mqttInputChannel());
+        return adapter;
+    }
+
+    // ✅ NUOVO: Adapter per anomalie (topic: fridge/+/anomalies)
+    @Bean
+    public MqttPahoMessageDrivenChannelAdapter mqttAnomalyInbound() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(
+                        CLIENT_ID + "-inbound-anomalies",
+                        mqttClientFactory(),
+                        "fridge/+/anomalies"  // + = qualsiasi vehicleName
+                );
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.setOutputChannel(mqttAnomalyChannel());
         return adapter;
     }
 }

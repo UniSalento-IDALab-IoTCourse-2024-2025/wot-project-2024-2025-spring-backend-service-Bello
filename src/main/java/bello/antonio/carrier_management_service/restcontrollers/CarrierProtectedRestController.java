@@ -12,6 +12,7 @@ import bello.antonio.carrier_management_service.repositories.TripRepository;
 import bello.antonio.carrier_management_service.repositories.VehicleRepository;
 import bello.antonio.carrier_management_service.websocket.TelemetryWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,8 @@ public class CarrierProtectedRestController {
     private TelemetryWebSocketHandler telemetryHandler;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private final String FRIDGE_API_URL = "http://fridge-api:8002";
+    @Value("${FRIDGE_API_URL:http://fridge-streamer:8002}")
+    private String FRIDGE_API_URL;
 
     @Autowired
     private VehicleRepository vehicleRepository;
