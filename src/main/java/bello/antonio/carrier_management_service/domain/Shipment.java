@@ -11,6 +11,7 @@ import java.util.Date;
 public class Shipment {
     @Id
     private String id;
+    private String idTrip;
     private String vehicleName;
     private String departureAddress;
     private String arrivalAddress;
@@ -34,6 +35,14 @@ public class Shipment {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getIdTrip() {
+        return idTrip;
+    }
+
+    public void setIdTrip(String idTrip) {
+        this.idTrip = idTrip;
     }
 
     public String getVehicleName() {

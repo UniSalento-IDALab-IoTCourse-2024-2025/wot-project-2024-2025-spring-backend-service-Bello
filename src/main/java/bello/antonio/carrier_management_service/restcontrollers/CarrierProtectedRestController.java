@@ -46,8 +46,6 @@ public class CarrierProtectedRestController {
 
     @PostMapping("/addVehicle")
     public ResponseEntity<ApiResponseDTO<Vehicle>> postAddVehicle(@RequestBody VehicleDTO vehicleDTO) {
-        try {
-
             if (vehicleRepository.existsByVehicleName(vehicleDTO.getVehicleName())) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(new ApiResponseDTO<>("Vehicle name already exists", 409, null));
@@ -67,17 +65,13 @@ public class CarrierProtectedRestController {
             return ResponseEntity.ok(
                     new ApiResponseDTO<>("New vehicle added successfully", 200, vehicle)
             );
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponseDTO<>("Internal server error", 500, null));
-        }
     }
 
     @GetMapping("/vehicles")
     public ResponseEntity<ApiResponseDTO<List<VehicleDTO>>> getAllVehicles() {
         List<VehicleDTO> vehicles = vehicleRepository.findAll().stream().map(v -> {
             VehicleDTO dto = new VehicleDTO();
+            dto.setId(v.getId());
             dto.setVehicleName(v.getVehicleName());
             dto.setHeight(v.getHeight());
             dto.setLength(v.getLength());
@@ -94,20 +88,20 @@ public class CarrierProtectedRestController {
 
     @PostMapping("/deleteVehicle")
     public ResponseEntity<ApiResponseDTO> deleteVehicleCascade(@RequestBody VehicleDTO vehicleDTO) {
-        String vehicleName = vehicleDTO.getVehicleName();
-        if (vehicleName == null || vehicleName.isBlank()) {
+        String idVehicle = vehicleDTO.getId();
+        if (idVehicle == null || idVehicle.isBlank()) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponseDTO("Missing vehicleName in request body", 400, null));
         }
 
-        // 1️⃣ Cancella dagli shipment
-        shipmentRepository.deleteAllByVehicleName(vehicleName);
+        // Cancella dagli shipment
+        shipmentRepository.deleteAllByVehicleName(vehicleDTO.getVehicleName());
 
-        // 2️⃣ Cancella dai trip
-        tripRepository.deleteAllByVehicleName(vehicleName);
+        // Cancella dai trip
+        tripRepository.deleteAllByVehicleName(vehicleDTO.getVehicleName());
 
-        // 3️⃣ Cancella dal vehicle
-        Optional<Vehicle> vehicleOpt = vehicleRepository.findByVehicleName(vehicleName);
+        // Cancella dal vehicle
+        Optional<Vehicle> vehicleOpt = vehicleRepository.findById(vehicleDTO.getId());
         if (vehicleOpt.isPresent()) {
             vehicleRepository.deleteById(vehicleOpt.get().getId());
             return ResponseEntity.ok(new ApiResponseDTO("Vehicle and related shipments/trips deleted successfully", 200, null));
@@ -150,20 +144,20 @@ public class CarrierProtectedRestController {
 
     @PostMapping("/deleteTrip")
     public ResponseEntity<ApiResponseDTO<Void>> deleteTrip(@RequestBody TripDTO tripDTO) {
-        String vehicleName = tripDTO.getVehicleName();
-        if (vehicleName == null || vehicleName.isBlank()) {
+        String idTrip = tripDTO.getId();
+        if (idTrip == null || idTrip.isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(new ApiResponseDTO<>("Missing vehicleName in request body", 400, null));
+                    .body(new ApiResponseDTO<>("Missing id in request body", 400, null));
         }
 
-        // 1️⃣ Elimina tutti gli shipment con questo vehicleName
-        List<Shipment> shipments = shipmentRepository.findByVehicleName(vehicleName);
+        // Elimina tutti gli shipment con questo idTrip
+        List<Shipment> shipments = shipmentRepository.findByIdTrip(idTrip);
         if (!shipments.isEmpty()) {
             shipmentRepository.deleteAll(shipments);
         }
 
-        // 2️⃣ Elimina il trip con questo vehicleName
-        Optional<Trip> tripOpt = tripRepository.findByVehicleName(vehicleName);
+        // Elimina il trip con questo idTrip
+        Optional<Trip> tripOpt = tripRepository.findById(idTrip);
         if (tripOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponseDTO<>("Trip not found", 404, null));
@@ -177,14 +171,15 @@ public class CarrierProtectedRestController {
     public ResponseEntity<ApiResponseDTO<List<ShipmentDTO>>> getShipmentsByTrip(
             @RequestBody TripDTO tripDTO) {
 
-        String vehicleName = tripDTO.getVehicleName();
+        String idTrip = tripDTO.getId();
 
         List<ShipmentDTO> shipments = shipmentRepository
-                .findByVehicleName(vehicleName)
+                .findByIdTrip(idTrip)
                 .stream()
                 .map(s -> {
                     ShipmentDTO dto = new ShipmentDTO();
                     dto.setId(s.getId());
+                    dto.setIdTrip(s.getIdTrip());
                     dto.setDepartureAddress(s.getDepartureAddress());
                     dto.setArrivalAddress(s.getArrivalAddress());
                     dto.setDepartureLatLng(s.getDepartureLatLng());
@@ -209,22 +204,38 @@ public class CarrierProtectedRestController {
     }
 
     @PostMapping("/deleteShipment")
-    public ResponseEntity<ApiResponseDTO<Void>> deleteShipment(
-            @RequestBody ShipmentDTO shipmentDTO) {
+    public ResponseEntity<ApiResponseDTO<Void>> deleteShipment(@RequestBody ShipmentDTO shipmentDTO) {
 
-        String vehicleName = shipmentDTO.getVehicleName();
-
-        if (vehicleName == null || vehicleName.isBlank()) {
+        String idShipment = shipmentDTO.getId();
+        if (idShipment == null || idShipment.isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(new ApiResponseDTO<>("Missing vehicleName", 400, null));
+                    .body(new ApiResponseDTO<>("Missing id of Shipment", 400, null));
         }
 
-        shipmentRepository.deleteByVehicleName(vehicleName);
+        // Recupera lo shipment dal DB
+        Shipment shipment = shipmentRepository.findById(idShipment)
+                .orElseThrow(() -> new RuntimeException("Shipment not found"));
+
+        // Recupera il Trip associato
+        Trip trip = tripRepository.findById(shipment.getIdTrip())
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        // Aggiorna la capacità residua
+        trip.setRemainingWidth(trip.getRemainingWidth() + shipment.getWidth());
+        trip.setRemainingHeight(trip.getRemainingHeight() + shipment.getHeight());
+        trip.setRemainingLength(trip.getRemainingLength() + shipment.getLength());
+        trip.setRemainingWeight(trip.getRemainingWeight() + shipment.getWeight());
+
+        tripRepository.save(trip);
+
+        // Elimina lo shipment
+        shipmentRepository.deleteById(idShipment);
 
         return ResponseEntity.ok(
-                new ApiResponseDTO<>("Shipments deleted successfully", 200, null)
+                new ApiResponseDTO<>("Shipment deleted and trip capacity updated successfully", 200, null)
         );
     }
+
 
     /**
      * Avvia la simulazione e prepara il WebSocket per ricevere dati.

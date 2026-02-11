@@ -286,68 +286,66 @@ public class CarrierRestController {
                 continue;
             }
 
-            try {
-                System.out.println("      🔄 Calcolo nuova route con waypoints...");
 
-                // ✅ NUOVO: Recupera tutti gli shipment esistenti per questo trip/vehicle
-                List<Shipment> existingShipments = shipmentRepository.findByVehicleName(trip.getVehicleName());
-                System.out.println("      📦 Shipment esistenti per " + trip.getVehicleName() + ": " + existingShipments.size());
+            System.out.println("      🔄 Calcolo nuova route con waypoints...");
 
-                // ✅ NUOVO: Costruisci liste parallele di departures e arrivals
-                List<LatLng> departures = new ArrayList<>();
-                List<LatLng> arrivals = new ArrayList<>();
-                List<String> labels = new ArrayList<>(); // per debug
+            // ✅ NUOVO: Recupera tutti gli shipment esistenti per questo trip/vehicle
+            List<Shipment> existingShipments = shipmentRepository.findByVehicleName(trip.getVehicleName());
+            System.out.println("      📦 Shipment esistenti per " + trip.getVehicleName() + ": " + existingShipments.size());
 
-                // Aggiungi gli shipment esistenti
-                for (Shipment existingShipment : existingShipments) {
-                    departures.add(existingShipment.getDepartureLatLng());
-                    arrivals.add(existingShipment.getArrivalLatLng());
-                    labels.add(existingShipment.getDepartureAddress() + " → " + existingShipment.getArrivalAddress());
-                    System.out.println("         - Esistente: " + existingShipment.getDepartureAddress() +
-                            " → " + existingShipment.getArrivalAddress());
-                }
+            // ✅ NUOVO: Costruisci liste parallele di departures e arrivals
+            List<LatLng> departures = new ArrayList<>();
+            List<LatLng> arrivals = new ArrayList<>();
+            List<String> labels = new ArrayList<>(); // per debug
 
-                // Aggiungi il nuovo shipment
-                departures.add(shipmentDeparture);
-                arrivals.add(shipmentArrival);
-                labels.add(shipmentDTO.getDepartureAddress() + " → " + shipmentDTO.getArrivalAddress());
-                System.out.println("         - Nuovo: " + shipmentDTO.getDepartureAddress() +
-                        " → " + shipmentDTO.getArrivalAddress());
-
-                // ✅ NUOVO: Ordina i waypoints rispettando i vincoli (pickup prima di delivery)
-                System.out.println("      🔀 Ordinamento waypoints con vincoli...");
-                List<LatLng> orderedWaypoints = PolylineUtils.orderWaypointsWithConstraints(
-                        trip.getDepartureLatLng(),
-                        departures,
-                        arrivals,
-                        labels
-                );
-
-                System.out.println("      📍 Totale waypoints ordinati: " + orderedWaypoints.size());
-
-                RouteInfoDTO newRoute = tripRoutingService.computeRouteWithWaypoints(
-                        trip.getDepartureLatLng(),
-                        trip.getArrivalLatLng(),
-                        orderedWaypoints  // ✅ Ora include TUTTI i waypoints ordinati correttamente
-                );
-
-                double durationDiff = Math.abs(newRoute.getDuration() - trip.getDuration());
-                System.out.println("      Nuova durata: " + String.format("%.0f", newRoute.getDuration()) + " sec");
-                System.out.println("      Durata originale: " + String.format("%.0f", trip.getDuration()) + " sec");
-                System.out.println("      Differenza: " + String.format("%.0f", durationDiff) + " sec");
-
-                if (durationDiff <= toleranceSec) {
-                    System.out.println("      ✅ ACCETTATO: differenza durata <= " + toleranceSec + " sec");
-                    trip.setDistanceKm(newRoute.getDistanceKm());
-                    trip.setDuration(newRoute.getDuration());
-                    trip.setPathPolyline(newRoute.getPolyline());
-                    filteredBusyTripsDTO.add(trip);
-                } else {
-                    System.out.println("      ❌ SCARTATO: differenza durata troppo alta (>" + toleranceSec + " sec)");
-                }
-            } catch (Exception e) {
-                System.err.println("      ⚠️ ERRORE calcolo route: " + e.getMessage());
+            // Aggiungi gli shipment esistenti
+            for (Shipment existingShipment : existingShipments) {
+                departures.add(existingShipment.getDepartureLatLng());
+                arrivals.add(existingShipment.getArrivalLatLng());
+                labels.add(existingShipment.getDepartureAddress() + " → " + existingShipment.getArrivalAddress());
+                System.out.println("         - Esistente: " + existingShipment.getDepartureAddress() +
+                        " → " + existingShipment.getArrivalAddress());
             }
+
+            // Aggiungi il nuovo shipment
+            departures.add(shipmentDeparture);
+            arrivals.add(shipmentArrival);
+            labels.add(shipmentDTO.getDepartureAddress() + " → " + shipmentDTO.getArrivalAddress());
+            System.out.println("         - Nuovo: " + shipmentDTO.getDepartureAddress() +
+                    " → " + shipmentDTO.getArrivalAddress());
+
+            // ✅ NUOVO: Ordina i waypoints rispettando i vincoli (pickup prima di delivery)
+            System.out.println("      🔀 Ordinamento waypoints con vincoli...");
+            List<LatLng> orderedWaypoints = PolylineUtils.orderWaypointsWithConstraints(
+                    trip.getDepartureLatLng(),
+                    departures,
+                    arrivals,
+                    labels
+            );
+
+            System.out.println("      📍 Totale waypoints ordinati: " + orderedWaypoints.size());
+
+            RouteInfoDTO newRoute = tripRoutingService.computeRouteWithWaypoints(
+                    trip.getDepartureLatLng(),
+                    trip.getArrivalLatLng(),
+                    orderedWaypoints  // ✅ Ora include TUTTI i waypoints ordinati correttamente
+            );
+
+            double durationDiff = Math.abs(newRoute.getDuration() - trip.getDuration());
+            System.out.println("      Nuova durata: " + String.format("%.0f", newRoute.getDuration()) + " sec");
+            System.out.println("      Durata originale: " + String.format("%.0f", trip.getDuration()) + " sec");
+            System.out.println("      Differenza: " + String.format("%.0f", durationDiff) + " sec");
+
+            if (durationDiff <= toleranceSec) {
+                System.out.println("      ✅ ACCETTATO: differenza durata <= " + toleranceSec + " sec");
+                trip.setDistanceKm(newRoute.getDistanceKm());
+                trip.setDuration(newRoute.getDuration());
+                trip.setPathPolyline(newRoute.getPolyline());
+                filteredBusyTripsDTO.add(trip);
+            } else {
+                System.out.println("      ❌ SCARTATO: differenza durata troppo alta (>" + toleranceSec + " sec)");
+            }
+
         }
 
         System.out.println("\n✅ FASE 5 - Busy trips filtrati compatibili: " + filteredBusyTripsDTO.size());
@@ -403,6 +401,7 @@ public class CarrierRestController {
         System.out.println("Trip started: " + t.isStarted());
 
         System.out.println("=== SHIPMENT DATA RECEIVED ===");
+        System.out.println("Shipment idTrip: " + s.getIdTrip());
         System.out.println("Shipment vehicleName: " + s.getVehicleName());
         System.out.println("Shipment departureAddress: " + s.getDepartureAddress());
         System.out.println("Shipment arrivalAddress: " + s.getArrivalAddress());
@@ -465,26 +464,30 @@ public class CarrierRestController {
                 System.out.println(">>> WARNING: Trip with ID " + t.getId() + " not found in database!");
             }
         }
-
-        // Salva sempre lo shipment
-        System.out.println(">>> Creating shipment...");
-        Shipment shipment = new Shipment();
-        shipment.setVehicleName(s.getVehicleName());
-        shipment.setDepartureAddress(s.getDepartureAddress());
-        shipment.setArrivalAddress(s.getArrivalAddress());
-        shipment.setDepartureLatLng(s.getDepartureLatLng());
-        shipment.setArrivalLatLng(s.getArrivalLatLng());
-        shipment.setArrivalDate(s.getArrivalDate());
-        shipment.setDuration(s.getDuration());
-        shipment.setDistanceKm(s.getDistanceKm());
-        shipment.setPrice(s.getPrice());
-        shipment.setWeight(s.getWeight());
-        shipment.setWidth(s.getWidth());
-        shipment.setHeight(s.getHeight());
-        shipment.setLength(s.getLength());
-        shipment.setRefrigerated(s.isRefrigerated());
-        Shipment savedShipment = shipmentRepository.save(shipment);
-        System.out.println(">>> Shipment saved with ID: " + savedShipment.getId());
+        Optional<Trip> savedTripOpt = tripRepository.findByVehicleName(t.getVehicleName());
+        if(savedTripOpt.isPresent()) {
+            Trip savedTrip = savedTripOpt.get();
+            // Salva lo shipment
+            System.out.println(">>> Creating shipment...");
+            Shipment shipment = new Shipment();
+            shipment.setIdTrip(savedTrip.getId());
+            shipment.setVehicleName(s.getVehicleName());
+            shipment.setDepartureAddress(s.getDepartureAddress());
+            shipment.setArrivalAddress(s.getArrivalAddress());
+            shipment.setDepartureLatLng(s.getDepartureLatLng());
+            shipment.setArrivalLatLng(s.getArrivalLatLng());
+            shipment.setArrivalDate(s.getArrivalDate());
+            shipment.setDuration(s.getDuration());
+            shipment.setDistanceKm(s.getDistanceKm());
+            shipment.setPrice(s.getPrice());
+            shipment.setWeight(s.getWeight());
+            shipment.setWidth(s.getWidth());
+            shipment.setHeight(s.getHeight());
+            shipment.setLength(s.getLength());
+            shipment.setRefrigerated(s.isRefrigerated());
+            Shipment savedShipment = shipmentRepository.save(shipment);
+            System.out.println(">>> Shipment saved with ID: " + savedShipment.getId());
+        }
         System.out.println("========== END SELECT TRIP ==========");
 
         return ResponseEntity.ok(
