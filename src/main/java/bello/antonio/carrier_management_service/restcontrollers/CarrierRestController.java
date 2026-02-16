@@ -289,11 +289,11 @@ public class CarrierRestController {
 
             System.out.println("      🔄 Calcolo nuova route con waypoints...");
 
-            // ✅ NUOVO: Recupera tutti gli shipment esistenti per questo trip/vehicle
+            // Recupera tutti gli shipment esistenti per questo trip/vehicle
             List<Shipment> existingShipments = shipmentRepository.findByVehicleName(trip.getVehicleName());
             System.out.println("      📦 Shipment esistenti per " + trip.getVehicleName() + ": " + existingShipments.size());
 
-            // ✅ NUOVO: Costruisci liste parallele di departures e arrivals
+            // Costruisci liste parallele di departures e arrivals
             List<LatLng> departures = new ArrayList<>();
             List<LatLng> arrivals = new ArrayList<>();
             List<String> labels = new ArrayList<>(); // per debug
@@ -314,7 +314,7 @@ public class CarrierRestController {
             System.out.println("         - Nuovo: " + shipmentDTO.getDepartureAddress() +
                     " → " + shipmentDTO.getArrivalAddress());
 
-            // ✅ NUOVO: Ordina i waypoints rispettando i vincoli (pickup prima di delivery)
+            // Ordina i waypoints rispettando i vincoli (pickup prima di delivery)
             System.out.println("      🔀 Ordinamento waypoints con vincoli...");
             List<LatLng> orderedWaypoints = PolylineUtils.orderWaypointsWithConstraints(
                     trip.getDepartureLatLng(),
@@ -336,11 +336,27 @@ public class CarrierRestController {
             System.out.println("      Durata originale: " + String.format("%.0f", trip.getDuration()) + " sec");
             System.out.println("      Differenza: " + String.format("%.0f", durationDiff) + " sec");
 
+
+            Optional<Vehicle> vehicle = vehicleRepository.findByVehicleName(trip.getVehicleName());
+            if (vehicle.isEmpty()) {
+                System.out.println("      ❌ SCARTATO: veicolo non trovato");
+                continue;
+            }
+
             if (durationDiff <= toleranceSec) {
                 System.out.println("      ✅ ACCETTATO: differenza durata <= " + toleranceSec + " sec");
                 trip.setDistanceKm(newRoute.getDistanceKm());
                 trip.setDuration(newRoute.getDuration());
                 trip.setPathPolyline(newRoute.getPolyline());
+
+                // n = numero shipment già presenti
+                int n = existingShipments.size();
+                float fullPartialPrice = (float) (distanceKm * vehicle.get().getPricePerKm());
+                float discountedPrice = (float) (fullPartialPrice / Math.pow(2, n));
+                trip.setPrice(discountedPrice);
+
+                System.out.println("      📦 Shipment totali (incluso nuovo): " + n);
+                System.out.println("      💰 Prezzo: €" + String.format("%.2f", fullPartialPrice) + " / 2^" + n + " = €" + String.format("%.2f", discountedPrice));
                 filteredBusyTripsDTO.add(trip);
             } else {
                 System.out.println("      ❌ SCARTATO: differenza durata troppo alta (>" + toleranceSec + " sec)");
@@ -479,7 +495,7 @@ public class CarrierRestController {
             shipment.setArrivalDate(s.getArrivalDate());
             shipment.setDuration(s.getDuration());
             shipment.setDistanceKm(s.getDistanceKm());
-            shipment.setPrice(s.getPrice());
+            shipment.setPrice(t.getPrice());
             shipment.setWeight(s.getWeight());
             shipment.setWidth(s.getWidth());
             shipment.setHeight(s.getHeight());

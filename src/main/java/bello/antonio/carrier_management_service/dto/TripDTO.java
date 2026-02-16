@@ -153,4 +153,6 @@ public class TripDTO {
     public void setRefrigerated(boolean refrigerated) {
         this.refrigerated = refrigerated;
     }
+
+
 }
