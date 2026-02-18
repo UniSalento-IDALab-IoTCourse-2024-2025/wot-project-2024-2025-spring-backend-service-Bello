@@ -1,11 +1,13 @@
 package bello.antonio.carrier_management_service.dto;
 
-public class CarrierManagerDTO {
+import bello.antonio.carrier_management_service.domain.Role;
+
+public class UserDTO {
 
     private String id;
     private String email;
     private String password;
-    private String role;
+    private Role role;
 
     public String getId() {
         return id;
@@ -31,11 +33,11 @@ public class CarrierManagerDTO {
         this.password = password;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 }

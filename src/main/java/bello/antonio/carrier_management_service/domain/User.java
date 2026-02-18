@@ -3,14 +3,14 @@ package bello.antonio.carrier_management_service.domain;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document("carrier_manager")
-public class CarrierManager {
+@Document("user")
+public class User {
 
     @Id
     private String id;
     private String email;
     private String password;
-    private String role;
+    private Role role;
 
     public String getId() {
         return id;
@@ -36,11 +36,11 @@ public class CarrierManager {
         this.password = password;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 }

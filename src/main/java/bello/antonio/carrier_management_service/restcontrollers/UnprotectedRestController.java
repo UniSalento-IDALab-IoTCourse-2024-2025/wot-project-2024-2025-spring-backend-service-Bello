@@ -1,11 +1,8 @@
 package bello.antonio.carrier_management_service.restcontrollers;
 
-import bello.antonio.carrier_management_service.domain.CarrierManager;
-import bello.antonio.carrier_management_service.domain.Shipment;
-import bello.antonio.carrier_management_service.domain.Trip;
-import bello.antonio.carrier_management_service.domain.Vehicle;
+import bello.antonio.carrier_management_service.domain.*;
 import bello.antonio.carrier_management_service.dto.*;
-import bello.antonio.carrier_management_service.repositories.CarrierManagerRepository;
+import bello.antonio.carrier_management_service.repositories.UserRepository;
 import bello.antonio.carrier_management_service.repositories.ShipmentRepository;
 import bello.antonio.carrier_management_service.repositories.TripRepository;
 import bello.antonio.carrier_management_service.repositories.VehicleRepository;
@@ -16,6 +13,7 @@ import bello.antonio.carrier_management_service.service.TripRoutingService;
 import com.google.maps.model.LatLng;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -31,7 +29,7 @@ import static bello.antonio.carrier_management_service.configuration.SecurityCon
 
 @RestController
 @RequestMapping("/api/carrier")
-public class CarrierRestController {
+public class UnprotectedRestController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -43,7 +41,7 @@ public class CarrierRestController {
     private TripRoutingService tripRoutingService;
 
     @Autowired
-    private CarrierManagerRepository carrierManagerRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -79,55 +77,88 @@ public class CarrierRestController {
         }
     }
 
-
-    @RequestMapping(value = "/addCarrierManager", method = RequestMethod.POST)
-    public ResponseEntity<ApiResponseDTO<CarrierManager>> addCarrierManager(@RequestBody CarrierManagerDTO carrierManagerDTO) {
-
+    @RequestMapping(value="/register",
+            method=RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<ApiResponseDTO<UserDTO>> save(@RequestBody UserDTO userDTO) {
+        userDTO.setRole(Role.CLIENT);
         // Controllo se l'email è già registrata
-        if (carrierManagerRepository.findByEmail(carrierManagerDTO.getEmail()).isPresent()) {
-            ApiResponseDTO<CarrierManager> response = new ApiResponseDTO<>(
-                    "Carrier manager with this email already exists",
+        if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
+            ApiResponseDTO<UserDTO> response = new ApiResponseDTO<>(
+                    "User with this email already exists",
                     409, // 409 = Conflict
                     null
             );
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
 
-        CarrierManager carrierManager = new CarrierManager();
-        carrierManager.setEmail(carrierManagerDTO.getEmail());
-        carrierManager.setPassword(passwordEncoder().encode(carrierManagerDTO.getPassword()));
-        carrierManager.setRole("ADMIN");
+        User user = new User();
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(passwordEncoder().encode(userDTO.getPassword()));
+        user.setRole(userDTO.getRole());
 
-        carrierManagerRepository.save(carrierManager);
-
-        ApiResponseDTO<CarrierManager> response = new ApiResponseDTO<>(
-                "Carrier manager added successfully",
+        user = userRepository.save(user);
+        userDTO.setId(user.getId());
+        ApiResponseDTO<UserDTO> response = new ApiResponseDTO<>(
+                "New client added successfully",
                 200,
-                carrierManager
+                userDTO
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @RequestMapping(value = "/addUser", method = RequestMethod.POST)
+    public ResponseEntity<ApiResponseDTO<UserDTO>> addUser(@RequestBody UserDTO userDTO) {
+
+        // Controllo se l'email è già registrata
+        if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
+            ApiResponseDTO<UserDTO> response = new ApiResponseDTO<>(
+                    "User with this email already exists",
+                    409, // 409 = Conflict
+                    null
+            );
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        }
+
+        User user = new User();
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(passwordEncoder().encode(userDTO.getPassword()));
+        user.setRole(userDTO.getRole());
+
+        user = userRepository.save(user);
+        userDTO.setId(user.getId());
+
+        ApiResponseDTO<UserDTO> response = new ApiResponseDTO<>(
+                "User added successfully",
+                200,
+                userDTO
         );
 
         return ResponseEntity.ok(response);
     }
 
 
-    @RequestMapping(value = "/deleteCarrierManager", method = RequestMethod.POST)
-    public ResponseEntity<ApiResponseDTO<Void>> deleteCarrierManager(@RequestBody CarrierManagerDTO carrierManagerDTO) {
+    @RequestMapping(value = "/deleteUser", method = RequestMethod.POST)
+    public ResponseEntity<ApiResponseDTO<Void>> deleteUser(@RequestBody UserDTO userDTO) {
 
-        String email = carrierManagerDTO.getEmail();
+        String email = userDTO.getEmail();
         if (email == null || email.isBlank()) {
             ApiResponseDTO<Void> response = new ApiResponseDTO<>("Missing email in request body", 400, null);
             return ResponseEntity.badRequest().body(response);
         }
 
-        Optional<CarrierManager> carrierManagerOpt = carrierManagerRepository.findByEmail(email);
+        Optional<User> carrierManagerOpt = userRepository.findByEmail(email);
         if (carrierManagerOpt.isEmpty()) {
-            ApiResponseDTO<Void> response = new ApiResponseDTO<>("Carrier Manager not found", 404, null);
+            ApiResponseDTO<Void> response = new ApiResponseDTO<>("User not found", 404, null);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
 
-        carrierManagerRepository.deleteById(carrierManagerOpt.get().getId());
+        userRepository.deleteById(carrierManagerOpt.get().getId());
 
-        ApiResponseDTO<Void> response = new ApiResponseDTO<>("Carrier Manager deleted successfully", 200, null);
+        ApiResponseDTO<Void> response = new ApiResponseDTO<>("User deleted successfully", 200, null);
         return ResponseEntity.ok(response);
     }
 
