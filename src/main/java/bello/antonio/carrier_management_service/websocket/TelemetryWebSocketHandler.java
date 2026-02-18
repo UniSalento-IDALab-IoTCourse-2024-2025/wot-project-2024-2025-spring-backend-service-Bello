@@ -1,5 +1,7 @@
 package bello.antonio.carrier_management_service.websocket;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -12,87 +14,79 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class TelemetryWebSocketHandler extends TextWebSocketHandler {
 
-    // Sessione attiva (una sola alla volta)
-    private WebSocketSession activeSession = null;
-    
-    // Vehicle attualmente monitorato
-    private String activeVehicle = null;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Mappa sessione -> idTrip (solo sessioni che hanno fatto handshake)
+    private final ConcurrentHashMap<String, String> sessionTripMap = new ConcurrentHashMap<>();
+
+    // Mappa sessionId -> WebSocketSession (per poter inviare)
+    private final ConcurrentHashMap<String, WebSocketSession> activeSessions = new ConcurrentHashMap<>();
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        System.out.println("✅ WebSocket connesso: " + session.getId());
-        // Attiva subito la sessione (senza aspettare lo start)
-        this.activeSession = session;
-        System.out.println("📍 Sessione WebSocket ATTIVATA");
-    }
-
-    @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        System.out.println("❌ WebSocket disconnesso: " + session.getId());
-        if (activeSession != null && activeSession.getId().equals(session.getId())) {
-            activeSession = null;
-            activeVehicle = null;
-        }
+    public void afterConnectionEstablished(WebSocketSession session) {
+        // Non facciamo nulla: aspettiamo l'handshake con InfoSimulationDTO
+        System.out.println("🔌 WebSocket connesso: " + session.getId() + " — in attesa di handshake...");
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        // Il client può mandare messaggi se necessario (es. ping)
-        System.out.println("📩 Messaggio ricevuto: " + message.getPayload());
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        String tripId = sessionTripMap.remove(session.getId());
+        activeSessions.remove(session.getId());
+        System.out.println("❌ WebSocket disconnesso: " + session.getId() + " (tripId: " + tripId + ")");
     }
 
-    /**
-     * Attiva la sessione per ricevere dati di un veicolo.
-     */
-    public void startSession(WebSocketSession session, String vehicleName) {
-        this.activeSession = session;
-        this.activeVehicle = vehicleName;
-        System.out.println("🚀 Sessione attivata per: " + vehicleName);
-    }
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        // Primo messaggio = handshake con InfoSimulationDTO
+        try {
+            JsonNode json = objectMapper.readTree(message.getPayload());
 
-    /**
-     * Disattiva la sessione corrente.
-     */
-    public void stopSession() {
-        if (activeSession != null && activeSession.isOpen()) {
-            try {
-                activeSession.close();
-            } catch (IOException e) {
-                System.err.println("Errore chiusura WebSocket: " + e.getMessage());
-            }
-        }
-        activeSession = null;
-        activeVehicle = null;
-        System.out.println("⏹️ Sessione fermata");
-    }
+            if (json.has("idTrip") && json.has("vehicleName")) {
+                String idTrip = json.get("idTrip").asText();
+                String vehicleName = json.get("vehicleName").asText();
 
-    /**
-     * Invia dati al client se la sessione è attiva e il veicolo corrisponde.
-     */
-    public void sendTelemetry(String vehicleName, String jsonData) {
-        System.out.println("ActiveSession= " + activeSession + "\njsonData= " + jsonData);
-        if (activeSession != null && activeSession.isOpen()) {
-            try {
-                System.out.println("Sto inviano il messaggio al frontend");
-                activeSession.sendMessage(new TextMessage(jsonData));
-            } catch (IOException e) {
-                System.err.println("Errore invio WebSocket: " + e.getMessage());
+                sessionTripMap.put(session.getId(), idTrip);
+                activeSessions.put(session.getId(), session);
+
+                System.out.println("✅ Handshake completato — sessionId: " + session.getId()
+                        + " | vehicleName: " + vehicleName + " | idTrip: " + idTrip);
+
+                // Conferma al frontend
+                session.sendMessage(new TextMessage(
+                        objectMapper.writeValueAsString(
+                                java.util.Map.of("type", "handshake_ok", "idTrip", idTrip, "vehicleName", vehicleName)
+                        )
+                ));
+            } else {
+                System.out.println("⚠️ Messaggio WebSocket non riconosciuto: " + message.getPayload());
             }
 
+        } catch (Exception e) {
+            System.err.println("❌ Errore handshake WebSocket: " + e.getMessage());
         }
     }
 
     /**
-     * Verifica se c'è una sessione attiva.
+     * Invia dati solo alle sessioni che hanno registrato quell'idTrip.
      */
+    public void sendTelemetry(String idTrip, String jsonData) {
+        if (idTrip == null) return;
+
+        for (var entry : sessionTripMap.entrySet()) {
+            if (idTrip.equals(entry.getValue())) {
+                WebSocketSession session = activeSessions.get(entry.getKey());
+                if (session != null && session.isOpen()) {
+                    try {
+                        session.sendMessage(new TextMessage(jsonData));
+                    } catch (IOException e) {
+                        System.err.println("❌ Errore invio WebSocket: " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
     public boolean hasActiveSession() {
-        return activeSession != null && activeSession.isOpen();
-    }
-
-    /**
-     * Restituisce il veicolo attualmente monitorato.
-     */
-    public String getActiveVehicle() {
-        return activeVehicle;
+        return !activeSessions.isEmpty();
     }
 }

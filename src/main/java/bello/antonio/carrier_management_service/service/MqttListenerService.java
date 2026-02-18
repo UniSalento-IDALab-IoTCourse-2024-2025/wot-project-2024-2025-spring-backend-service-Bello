@@ -29,9 +29,10 @@ public class MqttListenerService {
         System.out.println("📡 MQTT TELEMETRY ricevuto [" + vehicleName + "]: " + payload.substring(0, Math.min(50, payload.length())) + "...");
 
         // ✅ Verifica se è un messaggio di completamento
+        JsonNode jsonNode = null;
         try {
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.readTree(payload);
+            jsonNode = mapper.readTree(payload);
 
             if (jsonNode.has("stream_status")) {
                 String status = jsonNode.get("stream_status").asText();
@@ -55,8 +56,9 @@ public class MqttListenerService {
             System.err.println("⚠️ Errore parsing telemetry: " + e.getMessage());
         }
 
-        // Inoltra al WebSocket
-        webSocketHandler.sendTelemetry(vehicleName, payload);
+        if (jsonNode == null) return;
+        String idTrip = jsonNode.has("id_trip") ? jsonNode.get("id_trip").asText() : null;
+        webSocketHandler.sendTelemetry(idTrip, payload);
     }
 
     /**
@@ -73,9 +75,10 @@ public class MqttListenerService {
         System.out.println("🚨 MQTT ANOMALY ricevuto [" + vehicleName + "]: " + payload.substring(0, Math.min(100, payload.length())) + "...");
 
         // Aggiungi tipo di messaggio per distinguerlo nel frontend
+        JsonNode jsonNode = null;
         try {
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.readTree(payload);
+            jsonNode = mapper.readTree(payload);
             ObjectNode modifiedNode = (ObjectNode) jsonNode;
             modifiedNode.put("message_type", "anomaly");
             payload = mapper.writeValueAsString(modifiedNode);
@@ -83,8 +86,9 @@ public class MqttListenerService {
             System.err.println("⚠️ Errore parsing anomaly: " + e.getMessage());
         }
 
-        // Inoltra al WebSocket
-        webSocketHandler.sendTelemetry(vehicleName, payload);
+        if (jsonNode == null) return;
+        String idTrip = jsonNode.has("id_trip") ? jsonNode.get("id_trip").asText() : null;
+        webSocketHandler.sendTelemetry(idTrip, payload);
     }
 
     private String extractVehicleName(String topic) {

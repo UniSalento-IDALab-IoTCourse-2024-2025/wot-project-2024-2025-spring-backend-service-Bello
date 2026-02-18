@@ -51,9 +51,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addUser", "/api/carrier/deleteUser", "/api/carrier/register").permitAll()
-                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addUser", "/api/carrier/deleteUser", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip").hasRole(Role.CLIENT.name())
-                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addUser", "/api/carrier/deleteUser", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip").hasRole(Role.TECHNICIAN.name())
+                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addUser", "/api/carrier/deleteUser", "/api/carrier/register", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip").permitAll()
                         .requestMatchers( "/api/carrier/addVehicle", "/api/carrier/vehicles", "/api/carrier/deleteVehicle", "/api/carrier/trips", "/api/carrier/deleteTrip", "/api/carrier/shipmentsByTrip", "/api/carrier/deleteShipment", "/api/carrier/trip/startSimulation", "/api/carrier/trip/stopSimulation", "/api/carrier/simulation/status").hasRole(Role.ADMIN.name())
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()

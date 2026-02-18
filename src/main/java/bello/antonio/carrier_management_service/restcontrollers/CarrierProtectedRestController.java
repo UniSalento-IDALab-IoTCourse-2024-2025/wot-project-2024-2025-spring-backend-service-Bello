@@ -3,10 +3,7 @@ package bello.antonio.carrier_management_service.restcontrollers;
 import bello.antonio.carrier_management_service.domain.Shipment;
 import bello.antonio.carrier_management_service.domain.Trip;
 import bello.antonio.carrier_management_service.domain.Vehicle;
-import bello.antonio.carrier_management_service.dto.ApiResponseDTO;
-import bello.antonio.carrier_management_service.dto.ShipmentDTO;
-import bello.antonio.carrier_management_service.dto.TripDTO;
-import bello.antonio.carrier_management_service.dto.VehicleDTO;
+import bello.antonio.carrier_management_service.dto.*;
 import bello.antonio.carrier_management_service.repositories.ShipmentRepository;
 import bello.antonio.carrier_management_service.repositories.TripRepository;
 import bello.antonio.carrier_management_service.repositories.VehicleRepository;
@@ -244,6 +241,7 @@ public class CarrierProtectedRestController {
     @PostMapping("/trip/startSimulation")
     public ResponseEntity<ApiResponseDTO<Void>> startSimulation(@RequestBody TripDTO tripDTO) {
         String vehicleName = tripDTO.getVehicleName();
+        String idTrip = tripDTO.getId();
 
         if (vehicleName == null || vehicleName.isBlank()) {
             return ResponseEntity.badRequest()
@@ -251,9 +249,14 @@ public class CarrierProtectedRestController {
         }
 
         try {
-            // 1. Chiama Fridge API per avviare lo stream
-            String url = FRIDGE_API_URL + "/stream/start/" + vehicleName;
-            restTemplate.postForEntity(url, null, Map.class);
+            // Costruisci il DTO da inviare alla Fridge API
+            InfoSimulationDTO infoSimulationDTO = new InfoSimulationDTO();
+            infoSimulationDTO.setVehicleName(vehicleName);
+            infoSimulationDTO.setIdTrip(idTrip);
+
+            // Chiama Fridge API con body invece del path
+            String url = FRIDGE_API_URL + "/stream/start";
+            restTemplate.postForEntity(url, infoSimulationDTO, Map.class);
 
             return ResponseEntity.ok(
                     new ApiResponseDTO<>("Simulation started for " + vehicleName, 200, null)
@@ -282,8 +285,7 @@ public class CarrierProtectedRestController {
                 System.out.println("ℹ️ Stream già terminato (stream ha finito il CSV)");
             }
 
-            // 2. Chiudi la sessione WebSocket
-            telemetryHandler.stopSession();
+
 
             return ResponseEntity.ok(
                     new ApiResponseDTO<>("Simulation stopped", 200, null)
