@@ -53,19 +53,30 @@ public class UnprotectedRestController {
     private ShipmentRepository shipmentRepository;
 
     @RequestMapping(value="/authenticate", method = RequestMethod.POST)
-    public ResponseEntity<ApiResponseDTO<String>> createAuthenticationToken(@RequestBody LoginDTO loginDTO) {
+    public ResponseEntity<ApiResponseDTO<AuthenticationResponseDTO>> createAuthenticationToken(@RequestBody LoginDTO loginDTO) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword())
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
+            // Recupera l'utente per ottenere il ruolo
+            Optional<User> userOpt = userRepository.findByEmail(loginDTO.getEmail());
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ApiResponseDTO<>("User not found", 500, null));
+            }
+
+            User user = userOpt.get();
             Map<String, Object> claims = new HashMap<>();
             claims.put("email", authentication.getName());
+            claims.put("role", user.getRole().toString());
             final String jwt = jwtUtilities.generateToken(authentication.getName(), claims);
 
+            // Crea la risposta con JWT e ruolo
+            AuthenticationResponseDTO authResponse = new AuthenticationResponseDTO(jwt, user.getRole());
             return ResponseEntity.ok(
-                    new ApiResponseDTO<>("Authentication successful", 200, jwt)
+                    new ApiResponseDTO<>("Authentication successful", 200, authResponse)
             );
 
         } catch (BadCredentialsException e) {
