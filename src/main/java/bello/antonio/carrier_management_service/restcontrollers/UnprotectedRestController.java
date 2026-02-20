@@ -12,6 +12,7 @@ import bello.antonio.carrier_management_service.service.PolylineUtils;
 import bello.antonio.carrier_management_service.service.TripRoutingService;
 import com.google.maps.model.LatLng;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
@@ -51,6 +53,12 @@ public class UnprotectedRestController {
 
     @Autowired
     private ShipmentRepository shipmentRepository;
+
+    @Autowired
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${FRIDGE_API_URL:http://fridge-streamer:8002}")
+    private String FRIDGE_API_URL;
 
     @RequestMapping(value="/authenticate", method = RequestMethod.POST)
     public ResponseEntity<ApiResponseDTO<AuthenticationResponseDTO>> createAuthenticationToken(@RequestBody LoginDTO loginDTO) {
@@ -485,6 +493,8 @@ public class UnprotectedRestController {
             trip.setPathPolyline(t.getPathPolyline());
             trip.setDepartureLatLng(t.getDepartureLatLng());
             trip.setArrivalLatLng(t.getArrivalLatLng());
+            trip.setDepartureAddress(s.getDepartureAddress());
+            trip.setArrivalAddress(s.getArrivalAddress());
             trip.setDistanceKm(t.getDistanceKm());
             trip.setDuration(t.getDuration());
             trip.setScheduled(true); // ora diventa scheduled
@@ -551,6 +561,78 @@ public class UnprotectedRestController {
         return ResponseEntity.ok(
                 new ApiResponseDTO<>("Trip selected and shipment created", 200, null)
         );
+    }
+
+
+    @PostMapping("/trip/startSimulation")
+    public ResponseEntity<ApiResponseDTO<Void>> startSimulation(@RequestBody TripDTO tripDTO) {
+        String vehicleName = tripDTO.getVehicleName();
+        String idTrip = tripDTO.getId();
+
+        if (vehicleName == null || vehicleName.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponseDTO<>("Missing vehicleName", 400, null));
+        }
+
+        try {
+            // ✅ vehicleName come path variable, nessun body
+            String url = FRIDGE_API_URL + "/stream/start/" + vehicleName;
+            restTemplate.postForEntity(url, null, Map.class);
+
+            return ResponseEntity.ok(
+                    new ApiResponseDTO<>("Simulation started for " + vehicleName, 200, null)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponseDTO<>("Error starting simulation: " + e.getMessage(), 500, null));
+        }
+    }
+
+    /**
+     * Ferma la simulazione e chiude il WebSocket.
+     */
+    @PostMapping("/trip/stopSimulation")
+    public ResponseEntity<ApiResponseDTO<Void>> stopSimulation() {
+        try {
+            // 1. Chiama Fridge API per fermare lo stream
+            String url = FRIDGE_API_URL + "/stream/stop";
+            try {
+                restTemplate.postForEntity(url, null, Map.class);
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                // Se ritorna 400, significa che lo stream è già terminato (normale)
+                if (e.getStatusCode() != HttpStatus.BAD_REQUEST) {
+                    throw e;
+                }
+                System.out.println("ℹ️ Stream già terminato (stream ha finito il CSV)");
+            }
+
+
+
+            return ResponseEntity.ok(
+                    new ApiResponseDTO<>("Simulation stopped", 200, null)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponseDTO<>("Error stopping simulation: " + e.getMessage(), 500, null));
+        }
+    }
+
+    /**
+     * Verifica lo stato della simulazione.
+     */
+    @GetMapping("/simulation/status")
+    public ResponseEntity<ApiResponseDTO<Map<String, Object>>> getSimulationStatus() {
+        try {
+            String url = FRIDGE_API_URL + "/stream/status";
+            Map response = restTemplate.getForObject(url, Map.class);
+
+            return ResponseEntity.ok(
+                    new ApiResponseDTO<>("Status retrieved", 200, response)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponseDTO<>("Error getting status: " + e.getMessage(), 500, null));
+        }
     }
 
 }

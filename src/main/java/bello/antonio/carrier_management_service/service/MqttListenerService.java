@@ -1,6 +1,11 @@
 package bello.antonio.carrier_management_service.service;
 
-import bello.antonio.carrier_management_service.websocket.TelemetryWebSocketHandler;
+import bello.antonio.carrier_management_service.domain.Notification;
+import bello.antonio.carrier_management_service.domain.Telemetry;
+import bello.antonio.carrier_management_service.dto.AnomalyMessageDTO;
+import bello.antonio.carrier_management_service.dto.TelemetryMessageDTO;
+import bello.antonio.carrier_management_service.repositories.NotificationRepository;
+import bello.antonio.carrier_management_service.repositories.TelemetryRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -9,95 +14,120 @@ import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+
 @Service
 public class MqttListenerService {
 
     @Autowired
-    private TelemetryWebSocketHandler webSocketHandler;
+    private NotificationRepository notificationRepository;
 
-    /**
-     * ✅ Riceve messaggi MQTT di TELEMETRIA e li inoltra al WebSocket.
-     */
+    @Autowired
+    private TelemetryRepository telemetryRepository;
+
+    private final ObjectMapper mapper = new ObjectMapper();
+
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public void handleMqttTelemetryMessage(Message<String> message) {
         String topic = (String) message.getHeaders().get("mqtt_receivedTopic");
         String payload = message.getPayload();
-
-        // Estrai vehicleName dal topic: fridge/{vehicleName}/telemetry
         String vehicleName = extractVehicleName(topic);
 
-        System.out.println("📡 MQTT TELEMETRY ricevuto [" + vehicleName + "]: " + payload.substring(0, Math.min(50, payload.length())) + "...");
-
-        // ✅ Verifica se è un messaggio di completamento
-        JsonNode jsonNode = null;
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            jsonNode = mapper.readTree(payload);
+            TelemetryMessageDTO dto = mapper.readValue(payload, TelemetryMessageDTO.class);
 
-            if (jsonNode.has("stream_status")) {
-                String status = jsonNode.get("stream_status").asText();
-
-                if ("completed".equals(status)) {
-                    System.out.println("🏁 Stream completato per " + vehicleName);
-
-                    // Aggiungi flag al messaggio
-                    ObjectNode modifiedNode = (ObjectNode) jsonNode;
-                    modifiedNode.put("is_stream_end", true);
-                    modifiedNode.put("message_type", "telemetry");
-                    payload = mapper.writeValueAsString(modifiedNode);
-                }
-            } else {
-                // Aggiungi tipo di messaggio ai dati normali
-                ObjectNode modifiedNode = (ObjectNode) jsonNode;
-                modifiedNode.put("message_type", "telemetry");
-                payload = mapper.writeValueAsString(modifiedNode);
+            if ("completed".equals(dto.getStreamStatus())) {
+                System.out.println("Stream completato per [" + vehicleName + "]");
+                return;
             }
-        } catch (Exception e) {
-            System.err.println("⚠️ Errore parsing telemetry: " + e.getMessage());
-        }
 
-        if (jsonNode == null) return;
-        String idTrip = jsonNode.has("id_trip") ? jsonNode.get("id_trip").asText() : null;
-        webSocketHandler.sendTelemetry(idTrip, payload);
+            Date timestamp = Date.from(
+                    LocalDateTime.parse(dto.getTimestamp(), DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                            .toInstant(ZoneOffset.UTC)
+            );
+
+            Telemetry telemetry = new Telemetry();
+            telemetry.setVehicleName(dto.getVehicleName());
+            telemetry.setTimestamp(timestamp);
+            telemetry.setRowIndex(dto.getRowIndex());
+            telemetry.settAmb(dto.gettAmb());
+            telemetry.settSet(dto.gettSet());
+            telemetry.settCabMeas(dto.gettCabMeas());
+            telemetry.settEvapSat(dto.gettEvapSat());
+            telemetry.settCondSat(dto.gettCondSat());
+            telemetry.setpSucBar(dto.getpSucBar());
+            telemetry.setpDisBar(dto.getpDisBar());
+            telemetry.setnCompHz(dto.getnCompHz());
+            telemetry.setShK(dto.getShK());
+            telemetry.setpCompW(dto.getpCompW());
+            telemetry.setqEvapW(dto.getqEvapW());
+            telemetry.setCop(dto.getCop());
+            telemetry.setDoorOpen(dto.isDoorOpen());
+            telemetry.setDefrostOn(dto.isDefrostOn());
+            telemetry.setValveOpen(dto.isValveOpen());
+
+            telemetryRepository.save(telemetry);
+            System.out.println("Telemetria salvata [" + vehicleName + "] row=" + dto.getRowIndex());
+
+        } catch (Exception e) {
+            System.err.println("Errore parsing telemetry message: " + e.getMessage());
+        }
     }
 
-    /**
-     * ✅ NUOVO: Riceve messaggi MQTT di ANOMALIE e li inoltra al WebSocket.
-     */
+
     @ServiceActivator(inputChannel = "mqttAnomalyChannel")
     public void handleMqttAnomalyMessage(Message<String> message) {
         String topic = (String) message.getHeaders().get("mqtt_receivedTopic");
         String payload = message.getPayload();
-
-        // Estrai vehicleName dal topic: fridge/{vehicleName}/anomalies
         String vehicleName = extractVehicleName(topic);
 
-        System.out.println("🚨 MQTT ANOMALY ricevuto [" + vehicleName + "]: " + payload.substring(0, Math.min(100, payload.length())) + "...");
-
-        // Aggiungi tipo di messaggio per distinguerlo nel frontend
-        JsonNode jsonNode = null;
         try {
             ObjectMapper mapper = new ObjectMapper();
-            jsonNode = mapper.readTree(payload);
-            ObjectNode modifiedNode = (ObjectNode) jsonNode;
-            modifiedNode.put("message_type", "anomaly");
-            payload = mapper.writeValueAsString(modifiedNode);
-        } catch (Exception e) {
-            System.err.println("⚠️ Errore parsing anomaly: " + e.getMessage());
-        }
+            AnomalyMessageDTO anomaly = mapper.readValue(payload, AnomalyMessageDTO.class);
 
-        if (jsonNode == null) return;
-        String idTrip = jsonNode.has("id_trip") ? jsonNode.get("id_trip").asText() : null;
-        webSocketHandler.sendTelemetry(idTrip, payload);
+            System.out.println("ANOMALY [" + vehicleName + "] row=" + anomaly.getRowIndex()
+                    + " | error=" + String.format("%.6f", anomaly.getReconstructionError())
+                    + " | detected=" + anomaly.isAnomalyDetected());
+
+            if (!anomaly.isAnomalyDetected()) return;
+
+            if (anomaly.getAlertMessage() != null) {
+                // Trigger principale: messaggio di transizione false→true
+                Notification notification = new Notification();
+                notification.setVehicleName(vehicleName);
+                notification.setTimestamp(anomaly.getTimestamp());
+                notification.setReconstructionError(anomaly.getReconstructionError());
+                notification.setRowIndex(anomaly.getRowIndex());
+                notification.setAlertMessage(anomaly.getAlertMessage());
+                notification.setRead(false);
+                notificationRepository.save(notification);
+                System.out.println("Nuova notifica salvata per [" + vehicleName + "]");
+
+            } else if (!notificationRepository.existsByVehicleNameAndReadFalse(vehicleName)) {
+                // Trigger secondario: anomalyDetected=true ma messaggio di transizione perso
+                Notification notification = new Notification();
+                notification.setVehicleName(vehicleName);
+                notification.setTimestamp(anomaly.getTimestamp());
+                notification.setReconstructionError(anomaly.getReconstructionError());
+                notification.setRowIndex(anomaly.getRowIndex());
+                notification.setAlertMessage("⚠️ Anomalia rilevata per " + vehicleName);
+                notification.setRead(false);
+                notificationRepository.save(notification);
+                System.out.println("Notifica salvata (fallback) per [" + vehicleName + "]");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Errore parsing anomaly message: " + e.getMessage());
+        }
     }
 
     private String extractVehicleName(String topic) {
-        // topic = "fridge/camion1/telemetry" o "fridge/camion1/anomalies"
         if (topic != null && topic.startsWith("fridge/")) {
             String[] parts = topic.split("/");
-            if (parts.length >= 2) {
-                return parts[1];
-            }
+            if (parts.length >= 2) return parts[1];
         }
         return "unknown";
     }

@@ -13,6 +13,8 @@ public class TripDTO {
     private LatLng departureLatLng;
     @GeoSpatialIndexed
     private LatLng arrivalLatLng;
+    private String departureAddress;
+    private String arrivalAddress;
     private String pathPolyline;
     private double distanceKm;
     private boolean started;
@@ -56,6 +58,22 @@ public class TripDTO {
 
     public void setArrivalLatLng(LatLng arrivalLatLng) {
         this.arrivalLatLng = arrivalLatLng;
+    }
+
+    public String getArrivalAddress() {
+        return arrivalAddress;
+    }
+
+    public void setArrivalAddress(String arrivalAddress) {
+        this.arrivalAddress = arrivalAddress;
+    }
+
+    public String getDepartureAddress() {
+        return departureAddress;
+    }
+
+    public void setDepartureAddress(String departureAddress) {
+        this.departureAddress = departureAddress;
     }
 
     public String getPathPolyline() {
