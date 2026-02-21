@@ -28,9 +28,9 @@ public class Telemetry {
     private double pCompW;
     private double qEvapW;
     private double cop;
-    private boolean doorOpen;
-    private boolean defrostOn;
-    private boolean valveOpen;
+    private int doorOpen;
+    private int defrostOn;
+    private int valveOpen;
 
     public String getId() {
         return id;
@@ -160,27 +160,27 @@ public class Telemetry {
         this.cop = cop;
     }
 
-    public boolean isDoorOpen() {
+    public int getDoorOpen() {
         return doorOpen;
     }
 
-    public void setDoorOpen(boolean doorOpen) {
+    public void setDoorOpen(int doorOpen) {
         this.doorOpen = doorOpen;
     }
 
-    public boolean isDefrostOn() {
+    public int getDefrostOn() {
         return defrostOn;
     }
 
-    public void setDefrostOn(boolean defrostOn) {
+    public void setDefrostOn(int defrostOn) {
         this.defrostOn = defrostOn;
     }
 
-    public boolean isValveOpen() {
+    public int getValveOpen() {
         return valveOpen;
     }
 
-    public void setValveOpen(boolean valveOpen) {
+    public void setValveOpen(int valveOpen) {
         this.valveOpen = valveOpen;
     }
 }

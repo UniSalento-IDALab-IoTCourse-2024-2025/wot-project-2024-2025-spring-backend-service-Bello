@@ -54,7 +54,6 @@ public class UnprotectedRestController {
     @Autowired
     private ShipmentRepository shipmentRepository;
 
-    @Autowired
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${FRIDGE_API_URL:http://fridge-streamer:8002}")
@@ -564,24 +563,16 @@ public class UnprotectedRestController {
     }
 
 
-    @PostMapping("/trip/startSimulation")
-    public ResponseEntity<ApiResponseDTO<Void>> startSimulation(@RequestBody TripDTO tripDTO) {
-        String vehicleName = tripDTO.getVehicleName();
-        String idTrip = tripDTO.getId();
-
-        if (vehicleName == null || vehicleName.isBlank()) {
+    @PostMapping("/trip/startSimulation/{vehicleName}")
+    public ResponseEntity<ApiResponseDTO<Void>> startSimulation(@PathVariable String vehicleName) {
+        if (vehicleName.isBlank()) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponseDTO<>("Missing vehicleName", 400, null));
         }
 
         try {
-            // ✅ vehicleName come path variable, nessun body
-            String url = FRIDGE_API_URL + "/stream/start/" + vehicleName;
-            restTemplate.postForEntity(url, null, Map.class);
-
-            return ResponseEntity.ok(
-                    new ApiResponseDTO<>("Simulation started for " + vehicleName, 200, null)
-            );
+            restTemplate.postForEntity(FRIDGE_API_URL + "/stream/start/" + vehicleName, null, Map.class);
+            return ResponseEntity.ok(new ApiResponseDTO<>("Simulation started for " + vehicleName, 200, null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponseDTO<>("Error starting simulation: " + e.getMessage(), 500, null));

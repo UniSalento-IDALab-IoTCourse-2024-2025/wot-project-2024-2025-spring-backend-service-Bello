@@ -65,9 +65,9 @@ public class MqttListenerService {
             telemetry.setpCompW(dto.getpCompW());
             telemetry.setqEvapW(dto.getqEvapW());
             telemetry.setCop(dto.getCop());
-            telemetry.setDoorOpen(dto.isDoorOpen());
-            telemetry.setDefrostOn(dto.isDefrostOn());
-            telemetry.setValveOpen(dto.isValveOpen());
+            telemetry.setDoorOpen(dto.getDoorOpen());
+            telemetry.setDefrostOn(dto.getDefrostOn());
+            telemetry.setValveOpen(dto.getValveOpen());
 
             telemetryRepository.save(telemetry);
             System.out.println("Telemetria salvata [" + vehicleName + "] row=" + dto.getRowIndex());

@@ -1,13 +1,17 @@
 package bello.antonio.carrier_management_service.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TelemetryMessageDTO {
-    private String vehicleName;
     private String timestamp;
+    @JsonProperty("vehicle_name")
+    private String vehicleName;
+    @JsonProperty("row_index")
     private int rowIndex;
+    @JsonProperty("stream_status")
     private String streamStatus;
-
     @JsonProperty("T_amb")
     private double tAmb;
     @JsonProperty("T_set")
@@ -33,11 +37,11 @@ public class TelemetryMessageDTO {
     @JsonProperty("COP")
     private double cop;
     @JsonProperty("door_open")
-    private boolean doorOpen;
+    private int doorOpen;
     @JsonProperty("defrost_on")
-    private boolean defrostOn;
+    private int defrostOn;
     @JsonProperty("valve_open")
-    private boolean valveOpen;
+    private int valveOpen;
 
     public String getVehicleName() {
         return vehicleName;
@@ -167,27 +171,27 @@ public class TelemetryMessageDTO {
         this.cop = cop;
     }
 
-    public boolean isDoorOpen() {
+    public int getDoorOpen() {
         return doorOpen;
     }
 
-    public void setDoorOpen(boolean doorOpen) {
+    public void setDoorOpen(int doorOpen) {
         this.doorOpen = doorOpen;
     }
 
-    public boolean isDefrostOn() {
+    public int getDefrostOn() {
         return defrostOn;
     }
 
-    public void setDefrostOn(boolean defrostOn) {
+    public void setDefrostOn(int defrostOn) {
         this.defrostOn = defrostOn;
     }
 
-    public boolean isValveOpen() {
+    public int getValveOpen() {
         return valveOpen;
     }
 
-    public void setValveOpen(boolean valveOpen) {
+    public void setValveOpen(int valveOpen) {
         this.valveOpen = valveOpen;
     }
 }

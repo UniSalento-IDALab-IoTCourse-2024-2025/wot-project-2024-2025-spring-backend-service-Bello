@@ -51,9 +51,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addUser", "/api/carrier/deleteUser", "/api/carrier/register", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip" , "/api/carrier/trip/startSimulation", "/api/carrier/trip/stopSimulation", "/api/carrier/simulation/status").permitAll()
-                        .requestMatchers( "/api/carrier/addVehicle", "/api/carrier/vehicles", "/api/carrier/deleteVehicle", "/api/carrier/trips", "/api/carrier/deleteTrip", "/api/carrier/shipmentsByTrip", "/api/carrier/deleteShipment").hasRole(Role.ADMIN.name())
-                        .requestMatchers( "/api/carrier/notifications", "/api/carrier/notifications/read/*", "/api/carrier/telemetry/*").hasRole(Role.TECHNICIAN.name())
+                        .requestMatchers( "/api/carrier/authenticate", "/api/carrier/addUser", "/api/carrier/deleteUser", "/api/carrier/register", "/api/carrier/retrieveTrips", "/api/carrier/selectTrip" , "/api/carrier/trip/startSimulation/{vehicleName}", "/api/carrier/trip/stopSimulation", "/api/carrier/simulation/status").permitAll()
+                        .requestMatchers("/api/carrier/addVehicle", "/api/carrier/deleteVehicle", "/api/carrier/trips", "/api/carrier/deleteTrip", "/api/carrier/shipmentsByTrip",
+                                "/api/carrier/deleteShipment").hasRole(Role.ADMIN.name())
+                        .requestMatchers("/api/carrier/vehicles").hasAnyRole(Role.ADMIN.name(), Role.TECHNICIAN.name())
+                        .requestMatchers("/api/carrier/notifications", "/api/carrier/notifications/read/*",
+                                "/api/carrier/telemetry/*").hasRole(Role.TECHNICIAN.name())
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
