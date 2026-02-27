@@ -13,7 +13,7 @@ public interface TripRepository extends MongoRepository<Trip, String> {
     void deleteAllByVehicleName(String vehicleName);
 
     @Aggregation(pipeline = {
-            // 1️⃣ Join con vehicles per ottenere refrigerated
+            //  Join con vehicles per ottenere refrigerated
             "{ $lookup: { " +
                     "from: 'vehicle', " +
                     "localField: 'vehicleName', " +
@@ -21,20 +21,10 @@ public interface TripRepository extends MongoRepository<Trip, String> {
                     "as: 'vehicle' " +
                     "} }",
 
-            // 2️⃣ Esplodi l'array vehicle
+            // Esplodi l'array vehicle
             "{ $unwind: '$vehicle' }",
 
-            // 3️⃣ Filtra per requisiti (dimensioni/peso dal trip, refrigerated dal vehicle)
-            "{ $match: { " +
-                    "'remainingWeight': { $gte: ?0 }, " +
-                    "'remainingWidth': { $gte: ?1 }, " +
-                    "'remainingHeight': { $gte: ?2 }, " +
-                    "'remainingLength': { $gte: ?3 }, " +
-                    "'vehicle.refrigerated': { $eq: ?4 }, " +
-                    "'arrivalDate': { $lte: ?5 } " +
-                    "} }",
-
-            // 4️⃣ Join con shipment per calcolare il prezzo
+            //  Join con shipment per ottenere dimensioni e prezzo
             "{ $lookup: { " +
                     "from: 'shipment', " +
                     "localField: 'vehicleName', " +
@@ -42,13 +32,24 @@ public interface TripRepository extends MongoRepository<Trip, String> {
                     "as: 'shipments' " +
                     "} }",
 
-            // 5️⃣ Calcola il prezzo minimo e dimezzalo
+            //  Esplodi shipments per calcolare il volume
+            "{ $unwind: '$shipments' }",
+
+            //  Filtra per requisiti (peso, refrigerated, arrivalDate, volume)
+            "{ $match: { " +
+                    "'remainingWeight': { $gte: ?0 }, " +
+                    "'vehicle.refrigerated': { $eq: ?1 }, " +
+                    "'arrivalDate': { $lte: ?2 }, " +
+                    "$expr: { $gte: ['$remainingVolume', { $multiply: ['$shipments.width', '$shipments.height', '$shipments.length'] }] } " +
+                    "} }",
+
+            //  Calcola il prezzo minimo e dimezzalo
             "{ $addFields: { " +
                     "'price': { $divide: [{ $min: '$shipments.price' }, 2] }, " +
                     "'scheduled': true " +
                     "} }",
 
-            // 6️⃣ Rimuovi i campi temporanei
+            //  Rimuovi i campi temporanei
             "{ $project: { 'vehicle': 0, 'shipments': 0 } }"
     })
     List<Trip> findBusyTrips(

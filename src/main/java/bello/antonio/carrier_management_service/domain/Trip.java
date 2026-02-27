@@ -25,10 +25,7 @@ public class Trip {
     private float price;
     private double duration;
     private boolean scheduled;
-    private int remainingWidth;
-    private int remainingHeight;
-    private int remainingLength;
-    private int remainingWeight;
+    private int remainingVolume;
     private boolean refrigerated;
 
     public String getId() {
@@ -135,36 +132,12 @@ public class Trip {
         this.duration = duration;
     }
 
-    public int getRemainingWeight() {
-        return remainingWeight;
+    public int getRemainingVolume() {
+        return remainingVolume;
     }
 
-    public void setRemainingWeight(int remainingWeight) {
-        this.remainingWeight = remainingWeight;
-    }
-
-    public int getRemainingLength() {
-        return remainingLength;
-    }
-
-    public void setRemainingLength(int remainingLength) {
-        this.remainingLength = remainingLength;
-    }
-
-    public int getRemainingHeight() {
-        return remainingHeight;
-    }
-
-    public void setRemainingHeight(int remainingHeight) {
-        this.remainingHeight = remainingHeight;
-    }
-
-    public int getRemainingWidth() {
-        return remainingWidth;
-    }
-
-    public void setRemainingWidth(int remainingWidth) {
-        this.remainingWidth = remainingWidth;
+    public void setRemainingVolume(int remainingVolume) {
+        this.remainingVolume = remainingVolume;
     }
 
     public boolean isRefrigerated() {
