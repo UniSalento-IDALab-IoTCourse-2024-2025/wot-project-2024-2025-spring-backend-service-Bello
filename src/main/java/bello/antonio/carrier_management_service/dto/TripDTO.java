@@ -23,6 +23,7 @@ public class TripDTO {
     private boolean scheduled;
     private double duration;
     private int remainingVolume;
+    private int remainingWeight;
     private boolean refrigerated;
 
     public String getId() {
@@ -145,5 +146,11 @@ public class TripDTO {
         this.refrigerated = refrigerated;
     }
 
+    public int getRemainingWeight() {
+        return remainingWeight;
+    }
 
+    public void setRemainingWeight(int remainingWeight) {
+        this.remainingWeight = remainingWeight;
+    }
 }

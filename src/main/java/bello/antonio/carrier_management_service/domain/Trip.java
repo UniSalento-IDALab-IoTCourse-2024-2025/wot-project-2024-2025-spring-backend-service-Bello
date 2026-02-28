@@ -26,6 +26,7 @@ public class Trip {
     private double duration;
     private boolean scheduled;
     private int remainingVolume;
+    private int remainingWeight;
     private boolean refrigerated;
 
     public String getId() {
@@ -134,6 +135,14 @@ public class Trip {
 
     public int getRemainingVolume() {
         return remainingVolume;
+    }
+
+    public int getRemainingWeight() {
+        return remainingWeight;
+    }
+
+    public void setRemainingWeight(int remainingWeight) {
+        this.remainingWeight = remainingWeight;
     }
 
     public void setRemainingVolume(int remainingVolume) {

@@ -118,10 +118,8 @@ public class AdminRestController {
             dto.setArrivalDate(trip.getArrivalDate());
             dto.setPrice(trip.getPrice());
             dto.setRefrigerated(trip.isRefrigerated());
+            dto.setRemainingVolume(trip.getRemainingVolume());
             dto.setRemainingWeight(trip.getRemainingWeight());
-            dto.setRemainingWidth(trip.getRemainingWidth());
-            dto.setRemainingHeight(trip.getRemainingHeight());
-            dto.setRemainingLength(trip.getRemainingLength());
             return dto;
         }).toList();
 
@@ -210,10 +208,8 @@ public class AdminRestController {
                 .orElseThrow(() -> new RuntimeException("Trip not found"));
 
         // Aggiorna la capacità residua
-        trip.setRemainingWidth(trip.getRemainingWidth() + shipment.getWidth());
-        trip.setRemainingHeight(trip.getRemainingHeight() + shipment.getHeight());
-        trip.setRemainingLength(trip.getRemainingLength() + shipment.getLength());
-        trip.setRemainingWeight(trip.getRemainingWeight() + shipment.getWeight());
+        trip.setRemainingVolume(trip.getRemainingVolume() + shipment.getWidth()*shipment.getLength()*shipment.getHeight());
+
 
         tripRepository.save(trip);
 

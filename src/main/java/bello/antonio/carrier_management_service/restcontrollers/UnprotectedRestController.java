@@ -239,6 +239,7 @@ public class UnprotectedRestController {
             TripDTO trip = new TripDTO();
             trip.setVehicleName(vehicle.getVehicleName());
             trip.setRemainingVolume(vehicle.getWidth() * vehicle.getLength() * vehicle.getHeight());
+            trip.setRemainingWeight(vehicle.getMaxWeight());
             trip.setRefrigerated(vehicle.isRefrigerated());
             trip.setArrivalDate(shipmentDTO.getArrivalDate());
             trip.setDepartureLatLng(departure);
@@ -291,6 +292,7 @@ public class UnprotectedRestController {
             dto.setScheduled(true);
             dto.setStarted(false);
             dto.setRemainingVolume(trip.getRemainingVolume());
+            dto.setRemainingWeight(trip.getRemainingWeight());
             return dto;
         }).toList();
 
@@ -453,6 +455,7 @@ public class UnprotectedRestController {
         System.out.println("Trip ID: " + t.getId());
         System.out.println("Trip vehicleName: " + t.getVehicleName());
         System.out.println("Trip arrivalDate: " + t.getArrivalDate());
+        System.out.println("Trip remaining Weight: " + t.getRemainingWeight());
         System.out.println("Trip pathPolyline: " + (t.getPathPolyline() != null ? t.getPathPolyline().substring(0, Math.min(50, t.getPathPolyline().length())) + "..." : "null"));
         System.out.println("Trip departureLatLng: " + t.getDepartureLatLng());
         System.out.println("Trip arrivalLatLng: " + t.getArrivalLatLng());
@@ -499,6 +502,7 @@ public class UnprotectedRestController {
             trip.setScheduled(true); // ora diventa scheduled
             trip.setStarted(false);
             trip.setRefrigerated(t.isRefrigerated());
+            trip.setRemainingWeight(t.getRemainingWeight()-s.getWeight());
             trip.setRemainingVolume(t.getRemainingVolume() - (s.getWidth() * s.getHeight() * s.getLength()));
             Trip savedTrip = tripRepository.save(trip);
             System.out.println(">>> Trip saved with ID: " + savedTrip.getId());
@@ -516,6 +520,7 @@ public class UnprotectedRestController {
                 existingTrip.setDistanceKm(t.getDistanceKm());
                 existingTrip.setDuration(t.getDuration());
                 existingTrip.setPathPolyline(t.getPathPolyline());
+                existingTrip.setRemainingWeight(t.getRemainingWeight()-s.getWeight());
                 existingTrip.setRemainingVolume(t.getRemainingVolume() - (s.getWidth() * s.getHeight() * s.getLength()));
                 Trip updatedTrip = tripRepository.save(existingTrip);
                 System.out.println(">>> Trip updated with new values:");
