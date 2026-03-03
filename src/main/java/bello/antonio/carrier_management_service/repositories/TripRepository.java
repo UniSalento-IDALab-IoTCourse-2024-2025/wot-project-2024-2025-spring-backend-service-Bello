@@ -13,7 +13,7 @@ public interface TripRepository extends MongoRepository<Trip, String> {
     void deleteAllByVehicleName(String vehicleName);
 
     @Aggregation(pipeline = {
-            //  Join con vehicles per ottenere refrigerated
+            // Join con vehicles per ottenere refrigerated
             "{ $lookup: { " +
                     "from: 'vehicle', " +
                     "localField: 'vehicleName', " +
@@ -21,36 +21,18 @@ public interface TripRepository extends MongoRepository<Trip, String> {
                     "as: 'vehicle' " +
                     "} }",
 
-            // Esplodi l'array vehicle
             "{ $unwind: '$vehicle' }",
 
-            //  Join con shipment per ottenere dimensioni e prezzo
-            "{ $lookup: { " +
-                    "from: 'shipment', " +
-                    "localField: 'vehicleName', " +
-                    "foreignField: 'vehicleName', " +
-                    "as: 'shipments' " +
-                    "} }",
-
-            //  Esplodi shipments per calcolare il volume
-            "{ $unwind: '$shipments' }",
-
-            //  Filtra per requisiti (peso, refrigerated, arrivalDate, volume)
+            // Filtra: peso, volume del NUOVO pacco, refrigerated, data
             "{ $match: { " +
                     "'remainingWeight': { $gte: ?0 }, " +
-                    "'vehicle.refrigerated': { $eq: ?1 }, " +
-                    "'arrivalDate': { $lte: ?2 }, " +
-                    "$expr: { $gte: ['$remainingVolume', { $multiply: ['$shipments.width', '$shipments.height', '$shipments.length'] }] } " +
+                    "$expr: { $gte: ['$remainingVolume', { $multiply: [?1, ?2, ?3] }] }, " +
+                    "'vehicle.refrigerated': { $eq: ?4 }, " +
+                    "'arrivalDate': { $lte: ?5 } " +
                     "} }",
 
-            //  Calcola il prezzo minimo e dimezzalo
-            "{ $addFields: { " +
-                    "'price': { $divide: [{ $min: '$shipments.price' }, 2] }, " +
-                    "'scheduled': true " +
-                    "} }",
-
-            //  Rimuovi i campi temporanei
-            "{ $project: { 'vehicle': 0, 'shipments': 0 } }"
+            // Rimuovi il campo temporaneo
+            "{ $project: { 'vehicle': 0 } }"
     })
     List<Trip> findBusyTrips(
             int weight,

@@ -299,8 +299,8 @@ public class UnprotectedRestController {
         LatLng shipmentDeparture = departure;
         LatLng shipmentArrival = arrival;
 
-        double maxDistanceKm = 1.5;
-        double toleranceSec = 1800;
+        double maxDistanceKm = 10.0;
+        double toleranceSec = 3600;
 
         System.out.println("\n🔍 FASE 4 - Filtraggio busy trips (soglia: " + maxDistanceKm + " km, tolleranza: " + toleranceSec + " sec)");
 
