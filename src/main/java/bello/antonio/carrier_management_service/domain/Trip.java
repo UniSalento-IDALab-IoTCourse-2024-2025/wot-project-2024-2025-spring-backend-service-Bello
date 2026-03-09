@@ -28,6 +28,7 @@ public class Trip {
     private int remainingVolume;
     private int remainingWeight;
     private boolean refrigerated;
+    //private TripStatus tripStatus;
 
     public String getId() {
         return id;
@@ -156,4 +157,6 @@ public class Trip {
     public void setRefrigerated(boolean refrigerated) {
         this.refrigerated = refrigerated;
     }
+
+
 }

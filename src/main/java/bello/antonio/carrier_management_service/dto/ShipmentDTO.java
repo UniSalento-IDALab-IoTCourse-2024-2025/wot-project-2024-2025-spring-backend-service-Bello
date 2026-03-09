@@ -1,5 +1,6 @@
 package bello.antonio.carrier_management_service.dto;
 
+import bello.antonio.carrier_management_service.domain.ShipmentStatus;
 import com.google.maps.model.LatLng;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 
@@ -25,7 +26,8 @@ public class ShipmentDTO {
     private boolean refrigerated;
     private float price;
     private double duration;
-
+    private String idClient;
+    //private ShipmentStatus shipmentStatus;
 
     public String getId() {
         return id;
@@ -154,4 +156,13 @@ public class ShipmentDTO {
     public void setDuration(double duration) {
         this.duration = duration;
     }
+
+    public String getIdClient() {
+        return idClient;
+    }
+
+    public void setIdClient(String idClient) {
+        this.idClient = idClient;
+    }
+
 }

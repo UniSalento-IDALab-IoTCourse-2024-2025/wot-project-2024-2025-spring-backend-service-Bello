@@ -3,7 +3,7 @@ version: "3.8"
 services:
 
   carrier-service:
-    image: antoniobello09/carrier-service:1.0.0
+    image: antoniobello09/carrier-service:1.0.1
     container_name: carrierserviceimage
     ports:
       - 8081:8080

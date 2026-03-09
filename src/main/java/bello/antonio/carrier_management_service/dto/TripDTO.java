@@ -1,5 +1,6 @@
 package bello.antonio.carrier_management_service.dto;
 
+import bello.antonio.carrier_management_service.domain.TripStatus;
 import com.google.maps.model.LatLng;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 
@@ -25,6 +26,7 @@ public class TripDTO {
     private int remainingVolume;
     private int remainingWeight;
     private boolean refrigerated;
+//  private TripStatus tripStatus;
 
     public String getId() {
         return id;
@@ -153,4 +155,5 @@ public class TripDTO {
     public void setRemainingWeight(int remainingWeight) {
         this.remainingWeight = remainingWeight;
     }
+
 }

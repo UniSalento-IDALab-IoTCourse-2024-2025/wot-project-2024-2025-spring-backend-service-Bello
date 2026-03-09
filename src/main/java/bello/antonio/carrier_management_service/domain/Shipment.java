@@ -28,6 +28,7 @@ public class Shipment {
     private int weight;
     private boolean refrigerated;
     private float price;
+    private String idClient;
 
     public String getId() {
         return id;
@@ -155,5 +156,13 @@ public class Shipment {
 
     public void setDuration(double duration) {
         this.duration = duration;
+    }
+
+    public String getIdClient() {
+        return idClient;
+    }
+
+    public void setIdClient(String idClient) {
+        this.idClient = idClient;
     }
 }

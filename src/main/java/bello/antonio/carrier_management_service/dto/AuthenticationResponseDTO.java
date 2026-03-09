@@ -5,6 +5,13 @@ import bello.antonio.carrier_management_service.domain.Role;
 public class AuthenticationResponseDTO {
     private String jwt;
     private Role role;
+    private String userId;
+
+    public AuthenticationResponseDTO(String jwt, Role role, String userId) {
+        this.jwt = jwt;
+        this.role = role;
+        this.userId = userId;
+    }
 
     public String getJwt() {
         return jwt;
@@ -14,20 +21,19 @@ public class AuthenticationResponseDTO {
         this.jwt = jwt;
     }
 
-    public AuthenticationResponseDTO(String jwt) {
-        this.jwt = jwt;
-    }
-
-    public AuthenticationResponseDTO(String jwt, Role role) {
-        this.jwt = jwt;
-        this.role = role;
-    }
-
     public Role getRole() {
         return role;
     }
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

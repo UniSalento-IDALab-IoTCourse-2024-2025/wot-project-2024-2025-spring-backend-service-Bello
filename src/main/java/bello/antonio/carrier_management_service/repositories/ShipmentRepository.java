@@ -9,6 +9,7 @@ public interface ShipmentRepository extends MongoRepository<Shipment, String> {
 
     List<Shipment> findByVehicleName(String vehicleName);
     List<Shipment> findByIdTrip(String idTrip);
+    List<Shipment> findByIdClient(String idClient);
     void deleteAllByVehicleName(String vehicleName);
     void deleteByVehicleName(String vehicleName);
 
