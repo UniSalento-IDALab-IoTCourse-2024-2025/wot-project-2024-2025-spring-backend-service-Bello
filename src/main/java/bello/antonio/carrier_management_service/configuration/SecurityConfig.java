@@ -68,7 +68,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/carrier/retrieveTrips", "/api/carrier/selectTrip", "/api/carrier/myShipments").hasRole(Role.CLIENT.name())
                         .requestMatchers("/api/carrier/vehicles").hasAnyRole(Role.ADMIN.name(), Role.TECHNICIAN.name())
                         .requestMatchers("/api/carrier/notifications", "/api/carrier/notifications/read/*",
-                                "/api/carrier/telemetry/*").hasRole(Role.TECHNICIAN.name())
+                                "/api/carrier/telemetry/*", "/api/carrier/reports/**").hasRole(Role.TECHNICIAN.name())
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

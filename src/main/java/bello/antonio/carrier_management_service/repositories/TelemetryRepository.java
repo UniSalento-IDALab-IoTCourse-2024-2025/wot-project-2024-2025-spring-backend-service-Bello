@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface TelemetryRepository extends MongoRepository<Telemetry, String> {
     List<Telemetry> findByVehicleNameOrderByTimestampDesc(String vehicleName);
+    List<Telemetry> findByVehicleNameAndTimestampBetweenOrderByTimestampAsc(String vehicleName, java.util.Date from, java.util.Date to);
 }

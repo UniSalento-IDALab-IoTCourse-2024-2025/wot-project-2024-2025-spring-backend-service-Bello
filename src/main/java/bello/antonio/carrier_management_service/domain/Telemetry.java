@@ -12,7 +12,7 @@ public class Telemetry {
     private String id;
     private String vehicleName;
 
-    @Indexed(expireAfter = "P2D") // P2D = 2 giorni in formato ISO 8601
+    @Indexed
     private Date timestamp;
 
     private int rowIndex;

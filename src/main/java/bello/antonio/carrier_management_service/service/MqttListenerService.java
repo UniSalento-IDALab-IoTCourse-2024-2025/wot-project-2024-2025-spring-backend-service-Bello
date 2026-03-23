@@ -14,9 +14,6 @@ import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 @Service
@@ -44,9 +41,9 @@ public class MqttListenerService {
                 return;
             }
 
+            String ts = dto.getTimestamp().replaceFirst("(\\.\\d{3})\\d+", "$1");
             Date timestamp = Date.from(
-                    LocalDateTime.parse(dto.getTimestamp(), DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                            .toInstant(ZoneOffset.UTC)
+                    java.time.OffsetDateTime.parse(ts).toInstant()
             );
 
             Telemetry telemetry = new Telemetry();
