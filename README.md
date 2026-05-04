@@ -12,6 +12,8 @@ The platform serves three user roles:
 
 The system is fully containerized via Docker Compose for local deployment, comprising a React frontend, a Spring Boot backend, a MongoDB database, a Mosquitto MQTT broker, and two Python-based microservices for telemetry simulation and anomaly detection.
 
+---
+
 ## B) System Architecture
 
 ```
@@ -39,22 +41,24 @@ The system is fully containerized via Docker Compose for local deployment, compr
 │  LSTM Autoencoder│              │  │  trips, shipments  │    │
 │  anomaly detect. │              │  │  telemetry (TTL)   │    │
 └──────────────────┘              │  │  notifications     │    │
-                                  │  └───────────────────┘    │
-                                  └───────────────────────────┘
-                                          │
-                                  ┌───────┴───────┐
-                                  │  Mosquitto    │
-                                  │  MQTT Broker  │
-                                  │  port 1883    │
-                                  └───────────────┘
+         ▲                        │  └───────────────────┘    │
+         │                        └───────────────────────────┘
+         │                                  │
+         │                        ┌─────────┴──────────┐
+         └────────────────────────┤  Mosquitto         │
+                 MQTT              │  MQTT Broker       │
+                                  │  port 1883         │
+                                  └────────────────────┘
 ```
 
 **Data flow:**
 
-1. The **Fridge Streamer** reads refrigeration sensor data from CSV datasets and publishes it to MQTT topic `fridge/{vehicleName}/telemetry`.
+1. The **Fridge Streamer** reads refrigeration sensor data from CSV datasets and publishes it to the MQTT topic `fridge/{vehicleName}/telemetry`.
 2. The **Anomaly Detector** subscribes to the same topic, runs an LSTM autoencoder on incoming data, and publishes anomaly alerts to `fridge/{vehicleName}/anomalies`.
 3. The **Spring Boot Backend** subscribes to both MQTT topics: it persists telemetry to MongoDB (with TTL indexing) and converts anomaly messages into notification documents.
 4. The **React Frontend** consumes the REST API for all user interactions: authentication, fleet management, trip search and booking, telemetry dashboards, and notification management.
+
+---
 
 ## C) Repository Links
 
@@ -65,6 +69,8 @@ The system is fully containerized via Docker Compose for local deployment, compr
 | **Backend Service** (Spring Boot) — *this repository* | [wot-project-2024-2025-spring-backend-service-Bello](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-spring-backend-service-Bello) |
 | **FastAPI Services** (Streamer + Anomaly Detector) | [wot-project-2024-2025-fast-api-service-Bello](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-fast-api-service-Bello) |
 
+---
+
 ## D) This Component: Spring Boot Backend
 
 ### Overview
@@ -73,97 +79,171 @@ The **carrier-management-service** is the central backend of ChillChain. It is a
 
 ### Tech Stack
 
-- **Java 21** + **Spring Boot 3** (Web, Security, Data MongoDB, Integration)
-- **MongoDB** — document store for all platform entities
-- **MQTT** (Spring Integration) — subscribes to telemetry and anomaly topics from Mosquitto
-- **Google Maps Platform** — Routes API (path computation), Geocoding API (address resolution)
-- **Argon2** — password hashing
-- **JWT** — stateless role-based access control
+| Layer | Technology |
+|-------|-----------|
+| Language & Framework | Java 17 + Spring Boot 3.4 (Web, Security, Data MongoDB, Integration) |
+| Database | MongoDB — document store for all platform entities |
+| Messaging | MQTT via Eclipse Paho + Spring Integration (Mosquitto broker) |
+| External APIs | Google Maps Routes API v2, Google Geocoding API |
+| Security | JWT (JJWT 0.11.5) + Argon2 password hashing (BouncyCastle) |
+| Build | Gradle 8 |
+| Container | Docker (image on Docker Hub: `antoniobello09/carrier-management-service`) |
 
-### API Endpoints
+---
 
-#### Public (no authentication)
+## E) API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/carrier/authenticate` | Login, returns JWT + role |
-| `POST` | `/api/carrier/register` | Register a new user |
-| `POST` | `/api/carrier/retrieveTrips` | Find compatible trips for a shipment |
-| `POST` | `/api/carrier/selectTrip` | Confirm booking on a selected trip |
-
-#### Admin (role: ADMIN)
+### Public (no authentication required)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/carrier/addVehicle` | Register a new vehicle |
-| `POST` | `/api/carrier/deleteVehicle` | Delete vehicle with cascade |
+| `POST` | `/api/carrier/authenticate` | Login with email/password — returns JWT + role |
+| `POST` | `/api/carrier/register` | Register a new client account |
+| `POST` | `/api/carrier/trip/startSimulation/{vehicleName}` | Start telemetry streaming for a vehicle |
+| `POST` | `/api/carrier/trip/stopSimulation` | Stop the active telemetry stream |
+| `GET` | `/api/carrier/simulation/status` | Get current simulation status |
+
+### Admin (role: ADMIN)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/carrier/addVehicle` | Register a new vehicle in the fleet |
+| `DELETE` | `/api/carrier/deleteVehicle` | Delete a vehicle (cascade to trips and shipments) |
+| `GET` | `/api/carrier/vehicles` | List all registered vehicles |
 | `GET` | `/api/carrier/trips` | List all trips |
-| `POST` | `/api/carrier/deleteTrip` | Delete trip with cascade |
-| `POST` | `/api/carrier/shipmentsByTrip` | List shipments for a trip |
-| `POST` | `/api/carrier/deleteShipment` | Delete shipment, restore capacity |
+| `POST` | `/api/carrier/deleteTrip` | Delete a trip (cascade to shipments) |
+| `POST` | `/api/carrier/shipmentsByTrip` | List all shipments for a given trip |
+| `POST` | `/api/carrier/deleteShipment` | Remove a shipment and restore trip capacity |
 
-#### Technician (role: TECHNICIAN)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/carrier/vehicles` | List vehicles (shared with ADMIN) |
-| `GET` | `/api/carrier/notifications` | List anomaly notifications |
-| `POST` | `/api/carrier/notifications/read/{id}` | Mark notification as read |
-| `GET` | `/api/carrier/telemetry/{vehicleName}` | Telemetry history for a vehicle |
-
-#### Simulation Control (public)
+### Client (role: CLIENT)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/carrier/trip/startSimulation/{vehicleName}` | Start telemetry streaming |
-| `POST` | `/api/carrier/trip/stopSimulation` | Stop active streaming |
-| `GET` | `/api/carrier/simulation/status` | Current simulation status |
+| `POST` | `/api/carrier/retrieveTrips` | Search for compatible trips for a shipment request |
+| `POST` | `/api/carrier/selectTrip` | Confirm booking on a selected trip |
+| `GET` | `/api/carrier/myShipments` | List the client's own booked shipments |
 
-### MQTT Integration
+### Technician (role: TECHNICIAN)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/carrier/vehicles` | List all vehicles (shared with ADMIN) |
+| `GET` | `/api/carrier/notifications` | List all anomaly notifications (read/unread) |
+| `POST` | `/api/carrier/notifications/read/{id}` | Mark a notification as read |
+| `GET` | `/api/carrier/telemetry/{vehicleName}` | Telemetry history for a vehicle (`from`/`to` query params) |
+| `GET` | `/api/carrier/reports/operating-hours/monthly` | Active days per vehicle in a given month |
+| `GET` | `/api/carrier/reports/operating-hours/daily` | Active hours per vehicle on a given day |
+| `GET` | `/api/carrier/reports/cumulative-hours` | Total operating hours per vehicle in a date range |
+| `GET` | `/api/carrier/reports/alerts` | Anomaly count report per vehicle (sorted DESC) |
+
+---
+
+## F) Core Algorithms
+
+### Shared Trip Search (`retrieveTrips`)
+
+The most complex feature of the backend: given a shipment request (origin, destination, dimensions, weight), it returns both dedicated trip options and existing shared trips that the parcel could join.
+
+1. **Vehicle filtering** — MongoDB aggregation finds available vehicles (no active trip) that satisfy the shipment's volume and weight requirements.
+2. **Geocoding** — Origin and destination addresses are resolved to coordinates via Google Geocoding API.
+3. **Route computation** — Google Routes API v2 computes the direct path, encoded polyline, distance, and duration.
+4. **Shared trip candidates** — A second aggregation queries scheduled trips with sufficient remaining capacity.
+5. **Spatial filtering** — For each candidate trip, the pickup and delivery points are checked against the trip's polyline. Points further than 10 km from the route are discarded.
+6. **Waypoint ordering** — Accepted waypoints are sorted using a greedy nearest-neighbor algorithm with the constraint that each parcel's pickup must occur before its delivery.
+7. **Route recalculation** — The reordered waypoints are submitted to Google Routes API; trips whose duration increases by more than 1 hour are discarded.
+8. **Dynamic pricing** — The price for joining a shared trip with `n` existing shipments is `basePrice / 2^n`, creating an exponential discount that incentivises trip sharing.
+
+### Waypoint Ordering Algorithm
+
+`PolylineUtils.orderWaypointsWithConstraints()` is a greedy algorithm with precedence constraints:
+
+- At each step, it selects the nearest unvisited waypoint among those currently **available**.
+- A pickup is always available if not yet visited.
+- A delivery becomes available only after its corresponding pickup has been visited.
+- Distances are computed using the Haversine formula (`GeoUtils.haversineKm()`).
+
+---
+
+## G) MQTT & IoT Integration
 
 The backend subscribes to two MQTT topic patterns via Spring Integration:
 
-| Topic Pattern | Purpose |
-|---------------|---------|
-| `fridge/+/telemetry` | Persist telemetry data points to MongoDB with TTL expiration |
-| `fridge/+/anomalies` | Create notification documents from anomaly alerts |
+| Topic Pattern | Publisher | Handler |
+|---------------|-----------|---------|
+| `fridge/+/telemetry` | Fridge Streamer | Deserializes sensor readings and persists them to the `telemetry` collection (TTL-indexed) |
+| `fridge/+/anomalies` | Anomaly Detector | Creates `Notification` documents from LSTM autoencoder anomaly alerts |
 
-### MongoDB Collections
+The vehicle name is extracted dynamically from the topic string (e.g., `fridge/Truck1/telemetry` → `vehicleName = "Truck1"`).
+
+Telemetry documents have a **TTL index on `timestamp`** for automatic cleanup of old sensor data.
+
+---
+
+## H) MongoDB Collections
 
 | Collection | Description |
 |------------|-------------|
-| `user` | Accounts with email, Argon2-hashed password, and role |
-| `vehicle` | Fleet registry — dimensions stored as integers in cm, weight in kg |
-| `trip` | Routes with encoded polyline, distance, duration, remaining capacity |
-| `shipment` | Booked parcels linked to trips — dimensions in cm, weight in kg |
-| `telemetry` | Refrigeration sensor readings — TTL-indexed for automatic cleanup |
-| `notification` | Anomaly alerts with read/unread status |
+| `user` | Accounts — email, Argon2-hashed password, role (ADMIN / CLIENT / TECHNICIAN) |
+| `vehicle` | Fleet registry — dimensions in cm, weight in kg, price per km |
+| `trip` | Routes — encoded polyline, distance, duration, remaining volume/weight capacity |
+| `shipment` | Booked parcels linked to a trip and a client |
+| `telemetry` | Refrigeration sensor readings — TTL-indexed for automatic expiration |
+| `notification` | Anomaly alerts from the LSTM detector — read/unread status |
 
-### Key Services
+---
 
-- **MqttListenerService** — Subscribes to both MQTT channels. Deserializes telemetry messages and persists them with the vehicle name extracted from the topic. Anomaly messages trigger the creation of notification documents.
-- **TripRoutingService** — Integrates with Google Maps Routes API to compute paths for new dedicated trips and to recalculate routes with intermediate waypoints for shared trips.
-- **GeoUtils** — Haversine geodetic distance calculation between geographic coordinates.
-- **PolylineUtils** — Decodes Google encoded polylines and computes point-to-polyline distance for spatial matching of pickup/delivery points against existing trip routes.
+## I) Running the Service
 
-### Running
+### Prerequisites
 
-The service runs as part of the Docker Compose stack:
+- Docker and Docker Compose installed
+- A valid **Google Maps Platform API key** with Routes API and Geocoding API enabled
+
+### Option 1 — Backend + MongoDB via Docker Compose (recommended)
+
+Clone the repository and start the backend with its database:
 
 ```bash
 docker compose up -d
 ```
 
-For standalone development (requires MongoDB on `localhost:27017` and Mosquitto on `localhost:1883`):
+The backend will be available at `http://localhost:8081`.
+
+### Option 2 — Pull from Docker Hub
+
+The production image (without debug agent) is published on Docker Hub:
 
 ```bash
-./mvnw spring-boot:run
+docker pull antoniobello09/carrier-management-service:latest
+docker run -p 8081:8080 \
+  -e SPRING_DATA_MONGODB_URI=mongodb://<mongo-host>:27017/carrierdatabase \
+  -e GOOGLE_MAPS_API_KEY=<your-api-key> \
+  -e FRIDGE_API_URL=http://<fridge-streamer-host>:8002 \
+  antoniobello09/carrier-management-service:latest
 ```
 
-### Environment Variables
+### Option 3 — Build and run locally (development)
+
+Requires MongoDB on `localhost:27017` and Mosquitto on `localhost:1883`.
+
+```bash
+./gradlew bootJar
+docker build -t antoniobello09/carrier-management-service:latest .
+docker run -p 8081:8080 antoniobello09/carrier-management-service:latest
+```
+
+Or run directly with Gradle (no Docker):
+
+```bash
+./gradlew bootRun
+```
+
+---
+
+## J) Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FRIDGE_API_URL` | `http://fridge-streamer:8002` | Fridge Streamer service URL |
-| `GOOGLE_MAPS_API_KEY` | — | Google Maps Platform API key (required) |
-| `SPRING_DATA_MONGODB_URI` | `mongodb://mongo:27017/chillchain` | MongoDB connection string |
+| `SPRING_DATA_MONGODB_URI` | `mongodb://carrier-service-db:27017/carrierdatabase` | MongoDB connection string |
+| `GOOGLE_MAPS_API_KEY` | — | Google Maps Platform API key (**required**) |
+| `FRIDGE_API_URL` | `http://fridge-streamer:8002` | Fridge Streamer service base URL |

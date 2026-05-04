@@ -2,6 +2,7 @@ package bello.antonio.carrier_management_service.restcontrollers;
 
 import bello.antonio.carrier_management_service.domain.Shipment;
 import bello.antonio.carrier_management_service.domain.Trip;
+import bello.antonio.carrier_management_service.domain.User;
 import bello.antonio.carrier_management_service.domain.Vehicle;
 import bello.antonio.carrier_management_service.dto.ApiResponseDTO;
 import bello.antonio.carrier_management_service.dto.ShipmentDTO;
@@ -9,6 +10,7 @@ import bello.antonio.carrier_management_service.dto.TripDTO;
 import bello.antonio.carrier_management_service.dto.VehicleDTO;
 import bello.antonio.carrier_management_service.repositories.ShipmentRepository;
 import bello.antonio.carrier_management_service.repositories.TripRepository;
+import bello.antonio.carrier_management_service.repositories.UserRepository;
 import bello.antonio.carrier_management_service.repositories.VehicleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,9 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/carrier")
 public class AdminRestController {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -181,6 +186,10 @@ public class AdminRestController {
                     dto.setRefrigerated(s.isRefrigerated());
                     dto.setArrivalDate(s.getArrivalDate());
                     dto.setVehicleName(s.getVehicleName());
+                    String clientEmail = userRepository.findById(s.getIdClient())
+                            .map(User::getEmail)
+                            .orElse(s.getIdClient()); // fallback all'ID se utente non trovato
+                    dto.setIdClient(clientEmail);
                     return dto;
                 })
                 .toList();

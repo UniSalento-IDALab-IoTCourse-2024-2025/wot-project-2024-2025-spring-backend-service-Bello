@@ -3,18 +3,21 @@ version: "3.8"
 services:
 
   carrier-service:
-    image: antoniobello09/carrier-service:1.0.1
+    image: antoniobello09/carrier-management-service:latest
     container_name: carrierserviceimage
     ports:
       - 8081:8080
-      - 8000:8000
+    environment:
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - SPRING_DATA_MONGODB_URI=mongodb://carrier-service-db:27017/carrierdatabase
+      - FRIDGE_API_URL=http://fridge-streamer:8002
     depends_on:
       - carrier-service-db
     networks:
       - shared-net
 
   carrier-service-db:
-    image: mongo:5.0
+    image: mongo:7
     container_name: carrierservicemongodbimage
     ports:
       - 27018:27017
