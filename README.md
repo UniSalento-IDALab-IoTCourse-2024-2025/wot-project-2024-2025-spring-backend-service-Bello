@@ -171,7 +171,7 @@ Telemetry documents have a **TTL index on `timestamp`** for automatic cleanup of
 The recommended way to run the entire ChillChain platform is via the unified `docker-compose.yml` available in the [presentation repository](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-presentation-Bello). It starts all six services (broker, streamer, anomaly detector, database, backend, frontend) with a single command:
 
 ```bash
-docker login   # required — images are private
+docker login   
 docker compose pull
 docker compose up -d
 ```
