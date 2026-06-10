@@ -165,44 +165,43 @@ Telemetry documents have a **TTL index on `timestamp`** for automatic cleanup of
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- A valid **Google Maps Platform API key** with Routes API and Geocoding API enabled
 
-### Option 1 — Backend + MongoDB via Docker Compose (recommended)
+### Option 1 — Full stack via Docker Compose (recommended)
 
-Clone the repository and start the backend with its database:
+The recommended way to run the entire ChillChain platform is via the unified `docker-compose.yml` available in the [presentation repository](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-presentation-Bello). It starts all six services (broker, streamer, anomaly detector, database, backend, frontend) with a single command:
 
 ```bash
+docker login   # required — images are private
+docker compose pull
 docker compose up -d
 ```
 
-The backend will be available at `http://localhost:8081`.
-
 ### Option 2 — Pull from Docker Hub
-
-The production image (without debug agent) is published on Docker Hub:
 
 ```bash
 docker pull antoniobello09/carrier-management-service:latest
 docker run -p 8081:8080 \
   -e SPRING_DATA_MONGODB_URI=mongodb://<mongo-host>:27017/carrierdatabase \
-  -e GOOGLE_MAPS_API_KEY=<your-api-key> \
   -e FRIDGE_API_URL=http://<fridge-streamer-host>:8002 \
   antoniobello09/carrier-management-service:latest
 ```
 
-### Option 3 — Build and run locally (development)
+### Option 3 — Build locally (development)
 
 Requires MongoDB on `localhost:27017` and Mosquitto on `localhost:1883`.
 
 ```bash
 ./gradlew bootJar
-docker build -t antoniobello09/carrier-management-service:latest .
+docker build \
+  --build-arg GOOGLE_MAPS_API_KEY=<your-api-key> \
+  -t antoniobello09/carrier-management-service:latest .
 docker run -p 8081:8080 antoniobello09/carrier-management-service:latest
 ```
 
 Or run directly with Gradle (no Docker):
 
 ```bash
+export GOOGLE_MAPS_API_KEY=<your-api-key>
 ./gradlew bootRun
 ```
 
@@ -213,5 +212,5 @@ Or run directly with Gradle (no Docker):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SPRING_DATA_MONGODB_URI` | `mongodb://carrier-service-db:27017/carrierdatabase` | MongoDB connection string |
-| `GOOGLE_MAPS_API_KEY` | — | Google Maps Platform API key (**required**) |
 | `FRIDGE_API_URL` | `http://fridge-streamer:8002` | Fridge Streamer service base URL |
+| `GOOGLE_MAPS_API_KEY` | embedded at build time | Google Maps Platform API key. Required only when building the image locally via `--build-arg`. |
